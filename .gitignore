@@ -1,0 +1,45 @@
+# ─── Segredos ─────────────────────────────────────────────
+.env.local
+.env.*.local
+*.secret
+kaggle.json
+
+# ─── Dados ─────────────────────────────────────────────────
+data/raw/
+data/processed/
+data/models/
+*.csv
+*.parquet
+*.npz
+*.pkl
+!data/.gitkeep
+
+# ─── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.egg
+*.whl
+
+# ─── Logs ──────────────────────────────────────────────────
+logs/
+*.log
+
+# ─── Notebooks (checkpoints pesados) ───────────────────────
+notebooks/.ipynb_checkpoints/
+.ipynb_checkpoints/
+
+# ─── IDE / Editor ──────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
