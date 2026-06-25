@@ -1,86 +1,100 @@
 """
-JobMatch AI — Streamlit Monitoring Dashboard
+JobMatch AI — Dashboard de Métricas dos Modelos ML
 
 Uso: streamlit run src/app/monitor_dashboard.py
 
-Exibe métricas de uso da API: requisições, latência, erros.
+Exibe métricas de classificação (Fit x No Fit) e regressão salarial
+calculadas durante o treino e salvas em data/models/metrics.json.
+NÃO depende da API FastAPI.
 """
 
-import os
+import json
 from pathlib import Path
 
 import streamlit as st
 import pandas as pd
 
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+METRICS_PATH = Path("data/models/metrics.json")
+
+
+def load_metrics() -> dict | None:
+    if not METRICS_PATH.exists():
+        return None
+    with open(METRICS_PATH) as f:
+        return json.load(f)
+
 
 st.set_page_config(
-    page_title="JobMatch AI — Monitor",
+    page_title="JobMatch AI — Métricas dos Modelos",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-
-def fetch_metrics() -> dict | None:
-    try:
-        import httpx
-        resp = httpx.get(f"{API_URL}/metrics", timeout=10)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as e:
-        st.error(f"Erro ao conectar na API: {e}")
-        return None
-
-
-st.title("📊 JobMatch AI — Dashboard de Monitoramento")
+st.title("📊 JobMatch AI — Métricas dos Modelos ML")
+st.markdown("*Métricas calculadas no conjunto de teste durante o treino.*")
 st.markdown("---")
 
-metrics = fetch_metrics()
+metrics = load_metrics()
 
 if not metrics:
     st.warning(
-        "API não disponível. Certifique-se de que o servidor FastAPI está rodando "
-        "em %s", API_URL,
+        "Arquivo data/models/metrics.json não encontrado. "
+        "Execute o treino dos modelos primeiro."
     )
     st.stop()
 
+# ===== CLASSIFICAÇÃO =====
+st.subheader("🔍 Classificação Fit x No Fit")
+
+cm = metrics["classification"]["confusion_matrix"]
 c1, c2, c3, c4 = st.columns(4)
-with c1:
-    st.metric("Requisições Totais", metrics["total_requests"])
-with c2:
-    st.metric("Erros Totais", metrics["total_errors"])
-with c3:
-    st.metric("Taxa de Erro", f"{metrics['error_rate_pct']}%")
-with c4:
-    uptime = metrics["uptime_seconds"]
-    hours, remainder = divmod(uptime, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    st.metric("Uptime", f"{int(hours)}h {int(minutes)}m {int(seconds)}s")
+c1.metric("Modelo", metrics["classification"]["model_type"])
+c2.metric("Acurácia", f"{metrics['classification']['accuracy']:.2%}")
+c3.metric("F1-Score", f"{metrics['classification']['f1_score']:.2%}")
+c4.metric("Amostras de Teste", metrics["classification"]["test_samples"])
+
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Precisão", f"{metrics['classification']['precision']:.2%}")
+c2.metric("Recall", f"{metrics['classification']['recall']:.2%}")
+c3.metric("Verdadeiros Negativos", cm[0][0])
+c4.metric("Falsos Positivos", cm[0][1])
+
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Falsos Negativos", cm[1][0])
+c2.metric("Verdadeiros Positivos", cm[1][1])
+
+st.markdown("**Matriz de Confusão**")
+cm_df = pd.DataFrame(
+    cm,
+    index=["No Fit (Real)", "Fit (Real)"],
+    columns=["No Fit (Previsto)", "Fit (Previsto)"],
+)
+st.dataframe(cm_df, use_container_width=True)
 
 st.markdown("---")
-st.subheader("📈 Métricas por Endpoint")
 
-if metrics["endpoints"]:
-    rows = []
-    for ep, data in metrics["endpoints"].items():
-        rows.append({
-            "Endpoint": ep,
-            "Requisições": data["requests"],
-            "Erros": data["errors"],
-            "Latência Média (ms)": data["latency_ms_avg"],
-            "Latência P99 (ms)": data["latency_ms_p99"],
-            "Latência Min (ms)": data["latency_ms_min"],
-            "Latência Max (ms)": data["latency_ms_max"],
-        })
+# ===== REGRESSÃO =====
+st.subheader("💰 Regressão Salarial")
 
-    df = pd.DataFrame(rows)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+r = metrics["regression"]
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Modelo", r["model_type"])
+c2.metric("RMSE", f"${r['rmse']:,.2f}")
+c3.metric("MAE", f"${r['mae']:,.2f}")
+c4.metric("R²", f"{r['r2']:.2%}")
 
-    st.subheader("📉 Latência por Endpoint (ms)")
-    chart_data = df.set_index("Endpoint")[
-        ["Latência Média (ms)", "Latência P99 (ms)", "Latência Min (ms)", "Latência Max (ms)"]
-    ]
-    st.bar_chart(chart_data)
-else:
-    st.info("Nenhuma requisição registrada ainda.")
+c1, c2 = st.columns(2)
+c1.metric("Amostras de Teste", r["test_samples"])
+
+st.markdown("---")
+
+# ===== INFORMAÇÕES DO MODELO =====
+st.subheader("⚙️ Informações do Modelo")
+
+info = metrics["model_info"]
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Features do Vetorizador", f"{info['vectorizer_features']:,}")
+c2.metric("Total de Vagas", f"{info['total_jobs']:,}")
+c3.metric("Vagas com Salário", f"{info['jobs_with_salary']:,}")
+c4.metric("Pares de Treino", f"{info['training_pairs']:,}")

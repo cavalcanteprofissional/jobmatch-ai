@@ -1,10 +1,12 @@
 # Changelog
 
-## [0.5.0] — 2026-06-24
+## [0.5.0] — 2026-06-25
 
 ### Adicionado
+- **Métricas dos modelos ML** — Script computa accuracy, F1, precision, recall, matriz de confusão (classificação) e RMSE, MAE, R² (regressão) e salva em `data/models/metrics.json`
+- **Dashboard de métricas ML** — `monitor_dashboard.py` reescrito para exibir métricas de classificação e regressão (lê `metrics.json`, não depende da API)
+- **Integração no `train_pipeline.py`** — Salvamento automático de `metrics.json` ao final do treino
 - **Endpoint `/metrics`** — Middleware FastAPI coleta latência, erros e contagem por endpoint
-- **Dashboard de monitoramento** — Página Streamlit (`/monitor`) consumindo `/metrics` com KPIs e gráfico
 - **Treino direto com dados reais** — Script de treino rápido usando `jobs_clean.parquet` (2978 jobs) + `resume_jd_train.parquet` (6241 pares)
   - Classificador SVM: F1=0.715, acurácia 0.714
   - Regressor GradientBoosting: RMSE=$39.132
@@ -17,8 +19,11 @@
 - **`build_skills_map` otimizado** — Match exato primeiro, fuzzy limitado a 500 amostras (evita 5h+ de processamento)
 - **NaN na serialização JSON** — `np.float64` não era capturado por `isinstance(obj, float)`, causando `ValueError: Out of range float values are not JSON compliant`; ordem de verificação corrigida no `_clean_nan`
 - **Pipeline lento** — Criado atalho para treino direto com dados já processados, sem reprocessar 123k vagas com NLTK
+- **Label mapping no `train_pipeline.py`** — Agora mapeia "Good Fit"/"Potential Fit" → 1, "No Fit" → 0 (antes comparava com `== "Fit"` que nunca batia)
 
 ### Alterado
+- `monitor_dashboard.py` — Agora exibe métricas de ML (classificação + regressão) em vez de métricas HTTP da API
+- `train_pipeline.py` — Label mapping corrigido + salvamento automático de `metrics.json`
 - `CHANGELOG.md`, `README.md` — Atualizados com estado atual
 - `pyproject.toml` — Versão 0.5.0
 - `todo.md` — Validação local concluída (API, metrics, dashboard)
