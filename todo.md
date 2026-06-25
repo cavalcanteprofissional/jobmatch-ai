@@ -44,6 +44,10 @@
 - [x] Verificar endpoint /metrics — uptime, total_requests, latência por endpoint
 - [x] Iniciar dashboard Streamlit de monitoramento — http://localhost:8501
 
+### Etapa 6 — Dashboard Unificado (Modelo ML + API)
+- [x] `monitor_dashboard.py` reescrito com `st.tabs()`: aba "Modelo ML" (métricas de classificação e regressão) + aba "API" (requisições, latência, erros via GET /metrics)
+- [x] `train_pipeline.py` corrigido (label mapping "Good Fit"/"Potential Fit" → 1) e passou a salvar `metrics.json` automaticamente ao final do treino
+
 ## Decisões Técnicas
 
 | Decisão | Escolha | Motivo |
