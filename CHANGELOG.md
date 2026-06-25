@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.6.0] — 2026-06-25
+
+### Adicionado
+- **Gráficos Altair no dashboard ML** — `monitor_dashboard.py` agora exibe:
+  - Heatmap da matriz de confusão (Altair, scale blues + contagens)
+  - Barras de métricas (Acurácia, F1, Precisão, Recall) com linha meta 70%
+  - Histograma dos scores de decisão por classe verdadeira (Fit × No Fit)
+  - Scatter salário real × previsto com linha identidade
+  - Histograma dos resíduos (previsto − real)
+- **Dados de avaliação** — `scripts/reload_eval.py` salva `eval_clf.parquet` (1249 amostras com y_true, y_pred, y_prob) e `eval_reg.parquet` (179 amostras com y_true, y_pred)
+- **Re-treino rápido** — `scripts/reload_eval.py` treina LogisticRegression + GradientBoosting em ~30s a partir dos dados já pré-processados
+
+### Alterado
+- `monitor_dashboard.py` — Aba "Modelo ML" com Altair (heatmap, barras, histograma, scatter, resíduos) + KPIs
+- `pyproject.toml` — Versão 0.6.0
+- `todo.md` — Etapa 7 documentada
+
 ## [0.5.0] — 2026-06-25
 
 ### Adicionado

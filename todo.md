@@ -48,6 +48,17 @@
 - [x] `monitor_dashboard.py` reescrito com `st.tabs()`: aba "Modelo ML" (métricas de classificação e regressão) + aba "API" (requisições, latência, erros via GET /metrics)
 - [x] `train_pipeline.py` corrigido (label mapping "Good Fit"/"Potential Fit" → 1) e passou a salvar `metrics.json` automaticamente ao final do treino
 
+### Etapa 7 — Dashboard com Gráficos Altair
+- [x] `scripts/reload_eval.py`: re-treina modelos em segundos (dados já pré-processados) + salva `eval_clf.parquet` (1249 amostras com y_true, y_pred, y_prob) e `eval_reg.parquet` (179 amostras com y_true, y_pred)
+- [x] `monitor_dashboard.py` — aba "Modelo ML" com:
+  - **Heatmap** da matriz de confusão (Altair, scale blues + contagens)
+  - **Barras** de métricas (Acurácia, F1, Precisão, Recall) com meta de 70%
+  - **Histograma** dos scores de decisão por classe verdadeira
+  - **Scatter** salário real × previsto com linha identidade
+  - **Histograma** dos resíduos (previsto − real)
+  - KPIs e informações do modelo (mantido)
+- [x] 78 testes passam (nada quebrado)
+
 ## Decisões Técnicas
 
 | Decisão | Escolha | Motivo |

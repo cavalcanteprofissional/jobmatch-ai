@@ -11,7 +11,7 @@ Sistema de Machine Learning para matching inteligente entre currículos e vagas 
 - **Estimativa Salarial**: Regressão (GradientBoosting / RandomForest) para prever faixa salarial por cargo
 - **API REST**: Endpoints FastAPI para predição, health check, info dos modelos e métricas
 - **Frontend Híbrido**: Streamlit que consome a API REST com fallback direto para os modelos
-- **Dashboard de Monitoramento**: Métricas em tempo real (latência, erros, requisições por endpoint)
+- **Dashboard de Monitoramento**: Métricas em tempo real (latência, erros, requisições) + gráficos Altair do modelo ML (heatmap, histograma de scores, scatter salários)
 - **Docker**: Deploy multi-stage com Docker Compose (FastAPI + Streamlit)
 - **CI/CD**: GitHub Actions (lint + testes + coverage) com deploy automático para GHCR
 
@@ -79,10 +79,13 @@ uvicorn src.api.server:app --host 0.0.0.0 --port 8000
 # 8. Rodar frontend Streamlit (modo híbrido)
 streamlit run src/app/streamlit_app.py
 
-# 9. Dashboard de monitoramento (requer API rodando)
+# 9. Dashboard de monitoramento (requer API rodando ou modelos pré-treinados)
 streamlit run src/app/monitor_dashboard.py --server.port 8501
 
-# 10. Docker (deploy completo)
+# 10. Re-treino rápido + dados de avaliação (opcional, ~30s)
+python scripts/reload_eval.py
+
+# 11. Docker (deploy completo)
 docker compose up --build
 ```
 
@@ -127,9 +130,9 @@ poetry run pytest tests/ -v --cov=src
 
 | Tarefa | Métrica | Atual | Meta |
 |--------|---------|-------|------|
-| Classificação | F1-Score (macro) | 0.715 | ≥ 0.75 |
+| Classificação | F1-Score (macro) | 0.674 | ≥ 0.75 |
 | Ranking | NDCG@5 | — | ≥ 0.70 |
-| Regressão Salarial | RMSE | $39.132 | < $15.000 |
+| Regressão Salarial | RMSE | $35.041 | < $15.000 |
 | Similaridade | Precisão@5 | — | ≥ 0.60 |
 
 ## Stack
@@ -137,7 +140,7 @@ poetry run pytest tests/ -v --cov=src
 - Python 3.11–3.12
 - scikit-learn (TF-IDF, LogisticRegression, RandomForest, GradientBoosting, LinearSVC)
 - FastAPI + Uvicorn (REST API)
-- Streamlit (frontend híbrido + dashboard de monitoramento)
+- Streamlit + Altair (frontend híbrido + dashboard de monitoramento com gráficos)
 - Docker + Docker Compose (deploy)
 - GitHub Actions (CI/CD)
 - Parquet + pyarrow (armazenamento)
