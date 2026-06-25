@@ -70,8 +70,11 @@ def download_linkedin_jobs(dest: Optional[Path] = None) -> pd.DataFrame:
         check=True,
     )
 
-    csv_path = _find_csv(dest, hint="linkedin")
-    if csv_path is None:
+    # O dataset arshkon/linkedin-job-postings gera postings.csv como arquivo principal
+    csv_path = dest / "postings.csv"
+    if not csv_path.exists():
+        csv_path = _find_csv(dest, hint="postings")
+    if csv_path is None or not csv_path.exists():
         raise FileNotFoundError(
             f"Nenhum CSV encontrado em {dest} após download do LinkedIn."
         )
@@ -92,7 +95,7 @@ def download_resume_jd(dest: Optional[Path] = None) -> pd.DataFrame:
 
     col_map = {
         "resume": ["resume", "resume_text", "resume_str"],
-        "job_description": ["job_description", "jd", "description", "job_desc"],
+        "job_description": ["job_description", "job_description_text", "jd", "description", "job_desc"],
         "label": ["label", "fit_label", "target"],
     }
 
@@ -144,9 +147,19 @@ def download_job_skills(
 
     df = pd.read_csv(csv_path, low_memory=False)
 
+    # Dataset pode vir com job_link + job_skills (sem job_title)
+    # Tenta mergear com linkedin_job_postings.csv para obter job_title
+    linkedin_path = dest / "linkedin_job_postings.csv"
+    if "job_title" not in df.columns and linkedin_path.exists():
+        logger.info("Mergeando com linkedin_job_postings.csv via job_link...")
+        titles = pd.read_csv(
+            linkedin_path, usecols=["job_link", "job_title"], low_memory=False
+        )
+        df = df.merge(titles, on="job_link", how="left")
+
     col_map = {
         "job_title": ["job_title", "title", "job_title_name", "position"],
-        "skills": ["skills", "skill_list", "required_skills", "skills_required"],
+        "skills": ["skills", "skill_list", "required_skills", "skills_required", "job_skills"],
     }
     for standard_name, alternatives in col_map.items():
         if standard_name not in df.columns:

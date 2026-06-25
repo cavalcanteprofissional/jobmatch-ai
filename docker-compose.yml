@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: jobmatch-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./.env.local:/app/.env.local:ro
+    environment:
+      - STREAMLIT_USE_API=true
+      - API_URL=http://api:8000
+    env_file:
+      - .env.local
+    restart: unless-stopped
+    networks:
+      - jobmatch-net
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jobmatch-streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./.env.local:/app/.env.local:ro
+    environment:
+      - STREAMLIT_USE_API=true
+      - API_URL=http://api:8000
+    command: streamlit run src/app/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - jobmatch-net
+
+networks:
+  jobmatch-net:
+    driver: bridge

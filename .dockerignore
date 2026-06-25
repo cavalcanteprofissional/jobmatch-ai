@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+
+# Data (montado via volume)
+data/raw/
+data/processed/
+data/models/
+*.csv
+*.parquet
+*.npz
+*.pkl
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.secret
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+logs/
+*.log
+
+# Notebooks
+notebooks/
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Docs
+*.md

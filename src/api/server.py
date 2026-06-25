@@ -5,6 +5,7 @@ Endpoints:
     POST /predict      — Executa pipeline completa e retorna JSON
     GET  /health       — Health check do servidor
     GET  /models/info  — Informações dos modelos carregados
+    GET  /metrics      — Métricas de uso do servidor
 
 Uso:
     uvicorn src.api.server:app --reload --port 8000
@@ -17,6 +18,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from src.api.predictor import get_predictor
+from src.monitoring.metrics import metrics_collector
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -24,8 +26,23 @@ logger = setup_logger(__name__)
 app = FastAPI(
     title="JobMatch AI API",
     description="API de matching inteligente entre currículos e vagas",
-    version="0.3.0",
+    version="0.4.0",
 )
+
+
+# ── Metrics middleware ─────────────────────────────────────────────────────────
+
+
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    import time
+
+    start = time.time()
+    response = await call_next(request)
+    elapsed_ms = (time.time() - start) * 1000
+    endpoint = f"{request.method} {request.url.path}"
+    metrics_collector.record_request(endpoint, elapsed_ms, response.status_code)
+    return response
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
@@ -93,6 +110,12 @@ async def models_info():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/metrics")
+async def metrics():
+    """Retorna métricas de uso do servidor."""
+    return metrics_collector.get_metrics()
 
 
 @app.post("/predict")

@@ -105,36 +105,67 @@ def build_skills_map(
     score_threshold: int = 80,
     save_path: Optional[Path] = None,
 ) -> dict:
-    skill_titles = skills_df["job_title"].dropna().unique().tolist()
+    skill_titles_set = set(skills_df["job_title"].dropna().str.lower().unique())
     unique_titles = jobs_df["title"].dropna().unique().tolist()
 
-    if not skill_titles:
+    if not skill_titles_set:
         logger.warning("Nenhum título encontrado no Skills Dataset")
         return {}
 
     skills_map = {}
 
-    logger.info("Realizando fuzzy match de %s títulos únicos...", len(unique_titles))
-    for title in tqdm(unique_titles, desc="Matching títulos"):
-        match, score, _ = process.extractOne(
-            title, skill_titles, scorer=fuzz.token_sort_ratio
+    # Passo 1: matching exato (rápido)
+    logger.info("Match exato de %s títulos...", len(unique_titles))
+    exact_matches = []
+    remaining = []
+    for title in unique_titles:
+        if title.lower() in skill_titles_set:
+            exact_matches.append(title)
+        else:
+            remaining.append(title)
+
+    logger.info("  Exatos: %s | Restantes: %s", len(exact_matches), len(remaining))
+
+    # Passo 2: fuzzy match apenas nos restantes (limitado para performance)
+    fuzzy_limit = min(500, len(remaining))
+    fuzzy_sample = remaining[:fuzzy_limit]
+    skill_titles_list = sorted(skill_titles_set)
+
+    if fuzzy_sample:
+        logger.info(
+            "Fuzzy match de %s títulos (amostra de %s restantes)...",
+            fuzzy_limit, len(remaining),
         )
-        if score >= score_threshold:
-            matched_row = skills_df[skills_df["job_title"] == match].iloc[0]
-            raw_skills = matched_row.get("skills", "")
+        for title in tqdm(fuzzy_sample, desc="Fuzzy títulos"):
+            match, score, _ = process.extractOne(
+                title, skill_titles_list, scorer=fuzz.token_sort_ratio
+            )
+            if score >= score_threshold:
+                exact_matches.append(title)
 
-            if isinstance(raw_skills, str):
-                skills_list = [
-                    s.strip().lower()
-                    for s in raw_skills.split(",")
-                    if s.strip()
-                ]
-            elif isinstance(raw_skills, list):
-                skills_list = [s.strip().lower() for s in raw_skills if s]
-            else:
-                skills_list = []
+    # Passo 3: montar mapa a partir dos matches (exatos + fuzzy)
+    skill_lookup = skills_df.dropna(subset=["job_title"]).copy()
+    skill_lookup["job_title_lower"] = skill_lookup["job_title"].str.lower()
+    skill_lookup = skill_lookup.drop_duplicates(subset="job_title_lower")
 
-            skills_map[title.lower()] = skills_list
+    for title in exact_matches:
+        matched = skill_lookup[skill_lookup["job_title_lower"] == title.lower()]
+        if matched.empty:
+            continue
+        raw_skills = matched.iloc[0].get("skills", "")
+
+        if isinstance(raw_skills, str):
+            skills_list = [
+                s.strip().lower()
+                for s in raw_skills.split(",")
+                if s.strip()
+            ]
+        elif isinstance(raw_skills, list):
+            skills_list = [s.strip().lower() for s in raw_skills if s]
+        else:
+            skills_list = []
+
+        skills_map[title.lower()] = skills_list
 
     if save_path is None:
         save_path = PROCESSED_DIR / "skills_map.json"

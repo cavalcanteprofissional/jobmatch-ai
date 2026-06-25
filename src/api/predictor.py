@@ -12,6 +12,8 @@ Uso:
 from pathlib import Path
 from typing import Optional
 
+import json
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -78,6 +80,18 @@ class JobMatchPredictor:
 
         logger.info("JobMatchPredictor pronto!")
 
+    @staticmethod
+    def _clean_nan(obj):
+        if isinstance(obj, dict):
+            return {k: JobMatchPredictor._clean_nan(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [JobMatchPredictor._clean_nan(v) for v in obj]
+        if isinstance(obj, np.generic):
+            obj = obj.item()
+        if isinstance(obj, float) and (np.isnan(obj) or np.isinf(obj)):
+            return None
+        return obj
+
     def predict(
         self,
         resume_text: str,
@@ -109,7 +123,7 @@ class JobMatchPredictor:
         resume_vec = transform([resume_clean], self.vec)
 
         fit_label, fit_prob = classify(resume_vec, self.clf)
-        score_pct = round(fit_prob * 100, 1)
+        score_pct = round(float(fit_prob) * 100, 1)
 
         top_jobs_df = rank_jobs(
             resume_vec, self.jobs_matrix, self.jobs,
@@ -127,13 +141,17 @@ class JobMatchPredictor:
         result = {
             "score_pct": score_pct,
             "fit_label": fit_label,
-            "avg_adherence": round(top_jobs_df["adherence_score"].mean(), 1),
+            "avg_adherence": round(float(top_jobs_df["adherence_score"].mean()), 1),
             "fit_count": int((top_jobs_df["adherence_score"] >= fit_threshold).sum()),
             "top_k": top_k,
             "salary_est": salary_est,
             "gap": gap,
-            "top_jobs": top_jobs_df.reset_index().to_dict(orient="records"),
+            "top_jobs": json.loads(
+                top_jobs_df.reset_index().to_json(orient="records", date_format="iso")
+            ),
         }
+
+        result = self._clean_nan(result)
 
         logger.info(
             "Predict concluído: score=%.1f%%, fit=%s, top_jobs=%s",

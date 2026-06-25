@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jobmatch-ai"
-version = "0.3.0"
+version = "0.5.0"
 description = "Sistema de ML para matching inteligente entre currículos e vagas de emprego"
 authors = ["Residência Prática TIC 44 - UFC"]
 license = "MIT"
@@ -35,11 +35,16 @@ pytest-cov = ">=5.0"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-markers = ["slow: tests that are slow"]
+markers = [
+    "slow: tests that are slow (skip with -m 'not slow')",
+]
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["src/app/streamlit_app.py"]
+omit = [
+    "src/app/streamlit_app.py",
+    "src/app/monitor_dashboard.py",
+]
 
 [tool.coverage.report]
 show_missing = true

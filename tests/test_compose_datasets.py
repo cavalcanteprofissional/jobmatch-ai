@@ -86,7 +86,7 @@ class TestBuildSkillsMap:
         assert "python" in skills_map["data scientist"]
 
     def test_no_titles_in_skills(self, sample_jobs_df):
-        empty_skills = pd.DataFrame({"job_title": [], "skills": []})
+        empty_skills = pd.DataFrame({"job_title": pd.Series([], dtype=str), "skills": pd.Series([], dtype=str)})
         skills_map = build_skills_map(sample_jobs_df, empty_skills)
         assert skills_map == {}
 
