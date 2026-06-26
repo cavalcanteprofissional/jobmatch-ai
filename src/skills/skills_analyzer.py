@@ -120,13 +120,11 @@ def extract_skills_from_text(text: str, skills_vocabulary: set) -> set:
     text_lower = text.lower()
     found = set()
 
-    # Busca direta por palavra-chave
     for skill in skills_vocabulary:
         pattern = r"\b" + re.escape(skill.lower()) + r"\b"
         if re.search(pattern, text_lower):
             found.add(skill)
 
-    # Busca por sinônimos
     for canonical, aliases in _SYNONYMS.items():
         if canonical in skills_vocabulary and canonical not in found:
             for alias in aliases:
@@ -135,17 +133,6 @@ def extract_skills_from_text(text: str, skills_vocabulary: set) -> set:
                     found.add(canonical)
                     break
 
-    logger.debug("Extraídas %s skills de %s no vocabulário", len(found), len(skills_vocabulary))
-    return found
-
-
-def extract_skills_from_text(text: str, skills_vocabulary: set) -> set:
-    text_lower = text.lower()
-    found = set()
-    for skill in skills_vocabulary:
-        pattern = r"\b" + re.escape(skill.lower()) + r"\b"
-        if re.search(pattern, text_lower):
-            found.add(skill)
     logger.debug("Extraídas %s skills de %s no vocabulário", len(found), len(skills_vocabulary))
     return found
 

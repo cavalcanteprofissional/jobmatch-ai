@@ -6,6 +6,7 @@ Fornece dados sintéticos e helpers para todos os módulos de teste.
 
 from pathlib import Path
 from typing import Any, Generator
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -167,3 +168,95 @@ def mock_regressor():
     reg = DummyRegressor(strategy="constant", constant=100000)
     reg.fit([[0]], [100000])
     return reg
+
+
+# ── Fase 4 / Fase 5 fixtures ──────────────────────────────────────
+
+
+@pytest.fixture
+def dense_matrix() -> np.ndarray:
+    """Matriz densa numpy 50×10 para testar MLP/GaussianNB."""
+    rng = np.random.default_rng(42)
+    X = rng.random((50, 10))
+    return X
+
+
+@pytest.fixture
+def dense_target() -> np.ndarray:
+    """Target binário 50 amostras para nested CV."""
+    rng = np.random.default_rng(42)
+    return rng.integers(0, 2, size=50)
+
+
+@pytest.fixture
+def dense_reg_target() -> np.ndarray:
+    """Target contínuo 50 amostras para nested CV regressão."""
+    rng = np.random.default_rng(42)
+    return rng.random(50) * 200000
+
+
+@pytest.fixture
+def sample_resume_with_skills() -> str:
+    """Texto contendo skills reais do skills_map.json (case-insensitive)."""
+    return (
+        "I am a Data Scientist with experience in Python, SQL, scikit-learn, "
+        "and TensorFlow. I have worked on machine learning and deep learning "
+        "projects using Docker and AWS. I also know Kubernetes and CI/CD."
+    )
+
+
+@pytest.fixture
+def sample_job_titles() -> list[str]:
+    """Títulos de vagas existentes no skills_map.json."""
+    return [
+        "Data Scientist",
+        "Data Analyst",
+        "Software Engineer",
+        "Machine Learning Engineer",
+        "DevOps Engineer",
+    ]
+
+
+class _MockSentenceTransformer:
+    """Mock picklable de SentenceTransformer para testes unitários."""
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    def encode(self, texts, **kwargs):
+        n = len(texts)
+        rng = np.random.default_rng(42)
+        emb = rng.normal(0, 0.1, (n, 384))
+        norms = np.linalg.norm(emb, axis=1, keepdims=True)
+        return emb / norms
+
+
+@pytest.fixture(autouse=False)
+def mock_sbert():
+    """Patcheia sentence_transformers.SentenceTransformer para testes unitários."""
+    with patch(
+        "sentence_transformers.SentenceTransformer",
+        _MockSentenceTransformer,
+    ):
+        yield
+
+
+@pytest.fixture(autouse=False)
+def mock_cross_encoder():
+    """Patcheia sentence_transformers.CrossEncoder para testes unitários.
+
+    Retorna scores próximos a 0.5 para qualquer par.
+    """
+    import numpy as np
+
+    class MockCrossEncoder:
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+
+        def predict(self, pairs, **kwargs):
+            return np.full(len(pairs), 0.5)
+
+    with patch(
+        "sentence_transformers.CrossEncoder",
+        MockCrossEncoder,
+    ):
+        yield

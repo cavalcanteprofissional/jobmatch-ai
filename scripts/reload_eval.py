@@ -11,6 +11,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from scipy.sparse import save_npz
+from scipy.special import expit
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import (
     accuracy_score,
@@ -24,10 +25,12 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
-from scipy.special import expit
+from src.models.classifier import train_nested_cv_clf, DENSE_ONLY_MODELS as CLF_DENSE
+from src.models.salary_model import train_nested_cv_reg, DENSE_ONLY_MODELS as REG_DENSE
+from src.models.vectorizer import SentenceBertVectorizer, load_sbert_vectorizer
+from src.utils.logger import setup_logger
 
-from src.models.classifier import train_nested_cv_clf
-from src.models.salary_model import train_nested_cv_reg
+logger = setup_logger(__name__)
 
 DATA_DIR = Path("data")
 MODELS_DIR = DATA_DIR / "models"
@@ -47,16 +50,17 @@ y = pairs["label_bin"].values
 
 print(f"  -> {len(pairs)} pares, {y.sum()} Fit / {len(y)-y.sum()} No Fit")
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+
+# ── 1a. TF-IDF path ──────────────────────────────────────────────
 print("[2/5] Vetorizando TF-IDF (15k features)...")
 vec = TfidfVectorizer(max_features=15_000, stop_words="english")
 X_vec = vec.fit_transform(X_text)
 
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
-
-print("[3/5] Treinando classificador (nested CV)...")
+print("[3/5] Treinando classificador com TF-IDF (nested CV)...")
 clf_name, clf_params, clf_cv_scores, clf = train_nested_cv_clf(
-    X_vec, y, outer_cv=3, inner_cv=3, n_iter=15, random_state=42,
+    X_vec, y, outer_cv=2, inner_cv=2, n_iter=8, random_state=42,
 )
 
 # Holdout test set for final metrics
@@ -74,6 +78,7 @@ else:
 
 cm = confusion_matrix(y_test, y_pred).tolist()
 clf_metrics = {
+    "vectorizer": "tfidf",
     "model_type": type(clf).__name__,
     "accuracy": round(float(accuracy_score(y_test, y_pred)), 4),
     "f1_score": round(float(f1_score(y_test, y_pred)), 4),
@@ -100,6 +105,35 @@ eval_clf["y_pred_label"] = eval_clf["y_pred"].map({1: "Fit", 0: "No Fit"})
 eval_clf.to_parquet(MODELS_DIR / "eval_clf.parquet", index=False)
 print(f"  -> eval_clf.parquet ({len(eval_clf)} linhas)")
 print(f"  -> Nested CV F1: {clf_cv_scores}")
+
+# ── 1b. Sentence-BERT path (todos os modelos, incluindo MLP/GaussianNB) ──
+print("[3b/5] Treinando classificador com Sentence-BERT...")
+try:
+    sbert = SentenceBertVectorizer()
+    X_dense = sbert.fit_transform(X_text)
+    clf_sbert_name, clf_sbert_params, clf_sbert_scores, clf_sbert = train_nested_cv_clf(
+        X_dense, y, outer_cv=2, inner_cv=2, n_iter=8, random_state=42,
+    )
+    X_tr_s, X_te_s, y_tr_s, y_te_s = train_test_split(
+        X_dense, y, test_size=0.2, stratify=y, random_state=42
+    )
+    clf_sbert.fit(X_tr_s, y_tr_s)
+    yp_s = clf_sbert.predict(X_te_s)
+    clf_metrics["sbert"] = {
+        "model_type": type(clf_sbert).__name__,
+        "accuracy": round(float(accuracy_score(y_te_s, yp_s)), 4),
+        "f1_score": round(float(f1_score(y_te_s, yp_s)), 4),
+        "nested_cv_mean": round(float(np.mean(clf_sbert_scores)), 4),
+        "best_candidate": clf_sbert_name,
+    }
+        joblib.dump(sbert, MODELS_DIR / "sentence_bert.pkl")
+    joblib.dump(clf_sbert, MODELS_DIR / "classifier_sbert.pkl")
+    X_jobs_sbert = sbert.transform(jobs["full_text"].fillna("").tolist())
+    np.save(MODELS_DIR / "jobs_sbert_embeddings.npy", X_jobs_sbert)
+    print(f"  -> SBERT classifier: {clf_sbert_name} F1={clf_metrics['sbert']['f1_score']:.4f}")
+    print(f"  -> classifier_sbert.pkl + jobs_sbert_embeddings.npy salvos")
+except Exception as e:
+    logger.warning("Sentence-BERT path falhou: %s", e)
 
 # ── 2. Regressao Salarial ────────────────────────────────────────
 print("[4/5] Treinando regressao salarial (nested CV)...")
@@ -154,7 +188,7 @@ metrics = {
     "classification": clf_metrics,
     "regression": reg_metrics,
     "model_info": {
-        "vectorizer_features": vec.max_features,
+        "vectorizer": "tfidf",
         "total_jobs": len(jobs),
         "jobs_with_salary": len(has_salary),
         "training_pairs": len(pairs),

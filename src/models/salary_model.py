@@ -4,6 +4,7 @@ from typing import Optional
 
 import joblib
 import numpy as np
+from scipy.sparse import issparse
 from sklearn.ensemble import (
     ExtraTreesRegressor,
     GradientBoostingRegressor,
@@ -15,6 +16,7 @@ from sklearn.linear_model import Ridge, RidgeCV, SGDRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import GridSearchCV, KFold, RandomizedSearchCV, cross_val_score
 from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
 from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBRegressor
 
@@ -24,11 +26,26 @@ try:
 except ImportError:
     _HAS_LGBM = False
 
+try:
+    from catboost import CatBoostRegressor
+    _HAS_CATBOOST = True
+except ImportError:
+    _HAS_CATBOOST = False
+
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
 SALARY_MODEL_PATH = Path("data/models/salary_regressor.pkl")
+
+DENSE_ONLY_MODELS = {"mlp"}
+
+
+def _is_sparse_compatible(name: str, X) -> bool:
+    if not issparse(X):
+        return True
+    return name not in DENSE_ONLY_MODELS
+
 
 INDIVIDUAL_CANDIDATES: dict[str, tuple[type, dict]] = {
     "gradient_boosting": (
@@ -59,12 +76,23 @@ INDIVIDUAL_CANDIDATES: dict[str, tuple[type, dict]] = {
         DecisionTreeRegressor,
         {"random_state": 42},
     ),
+    "mlp": (
+        MLPRegressor,
+        {"max_iter": 300, "random_state": 42, "early_stopping": True,
+         "n_iter_no_change": 10},
+    ),
 }
 
 if _HAS_LGBM:
     INDIVIDUAL_CANDIDATES["lightgbm"] = (
         LGBMRegressor,
         {"random_state": 42, "verbosity": -1, "n_jobs": -1},
+    )
+
+if _HAS_CATBOOST:
+    INDIVIDUAL_CANDIDATES["catboost"] = (
+        CatBoostRegressor,
+        {"random_seed": 42, "verbose": 0, "allow_writing_files": False},
     )
 
 HYPERPARAM_GRIDS: dict[str, dict] = {
@@ -100,6 +128,11 @@ HYPERPARAM_GRIDS: dict[str, dict] = {
         "max_depth": [3, 5, 10, None],
         "min_samples_split": [2, 5, 10],
     },
+    "mlp": {
+        "hidden_layer_sizes": [(64,), (128,), (64, 32)],
+        "alpha": [0.0001, 0.001],
+        "learning_rate_init": [0.001, 0.01],
+    },
 }
 
 if _HAS_LGBM:
@@ -108,6 +141,13 @@ if _HAS_LGBM:
         "max_depth": [3, 5, -1],
         "learning_rate": [0.05, 0.1],
         "num_leaves": [31, 63],
+    }
+
+if _HAS_CATBOOST:
+    HYPERPARAM_GRIDS["catboost"] = {
+        "depth": [4, 6, 8],
+        "learning_rate": [0.01, 0.1],
+        "iterations": [200, 500],
     }
 
 
@@ -125,6 +165,8 @@ def _make_stacking() -> StackingRegressor:
     ]
     if _HAS_LGBM:
         estimators.append(("lgbm", _make_candidate("lightgbm")))
+    if _HAS_CATBOOST:
+        estimators.append(("cb", _make_candidate("catboost")))
     return StackingRegressor(
         estimators=estimators,
         final_estimator=Ridge(random_state=42),
@@ -142,6 +184,8 @@ def _make_voting() -> VotingRegressor:
     ]
     if _HAS_LGBM:
         estimators.append(("lgbm", _make_candidate("lightgbm")))
+    if _HAS_CATBOOST:
+        estimators.append(("cb", _make_candidate("catboost")))
     return VotingRegressor(estimators=estimators, n_jobs=-1)
 
 
@@ -169,6 +213,9 @@ def train_salary_model(
 
     logger.info("Avaliando regressores candidatos...")
     for name in ALL_CANDIDATES:
+        if not _is_sparse_compatible(name, X_train):
+            logger.debug("  %-25s incompatível com matriz sparse, pulando", name)
+            continue
         model = _get_model(name)
         try:
             rmse_scores = -cross_val_score(
@@ -228,6 +275,9 @@ def train_nested_cv_reg(
         fold_best_params = {}
 
         for name in ALL_CANDIDATES:
+            if not _is_sparse_compatible(name, X_train_fold):
+                logger.debug("  %-25s incompatível com matriz sparse, pulando", name)
+                continue
             base = _get_model(name)
             grid = HYPERPARAM_GRIDS.get(name, {})
 

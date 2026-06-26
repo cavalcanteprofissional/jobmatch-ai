@@ -316,6 +316,36 @@ def render_ml_tab(metrics: dict, eval_clf: pd.DataFrame | None, eval_reg: pd.Dat
                 with st.expander("Melhores Hiperparâmetros"):
                     st.json(reg["best_params"])
 
+    # ── SBERT Comparison ──
+    if "sbert" in clf:
+        st.markdown("---")
+        st.subheader("🧠 Comparação TF-IDF vs Sentence-BERT")
+        sbert_m = clf["sbert"]
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("SBERT Modelo", sbert_m["model_type"])
+        c2.metric("SBERT Acurácia", f"{sbert_m['accuracy']:.2%}")
+        c3.metric("SBERT F1-Score", f"{sbert_m['f1_score']:.2%}")
+        c4.metric("SBERT Nested CV F1", f"{sbert_m['nested_cv_mean']:.2%}")
+        comp = pd.DataFrame({
+            "Vetorização": ["TF-IDF", "SBERT"],
+            "F1-Score": [clf["f1_score"], sbert_m["f1_score"]],
+        })
+        chart = (
+            alt.Chart(comp)
+            .mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
+            .encode(
+                x=alt.X("Vetorização:N", sort=None),
+                y=alt.Y("F1-Score:Q", scale=alt.Scale(domain=[0, 1])),
+                color=alt.Color("Vetorização:N", scale=alt.Scale(
+                    domain=["TF-IDF", "SBERT"],
+                    range=["#667eea", "#10b981"],
+                )),
+                tooltip=[alt.Tooltip("F1-Score:Q", format=".2%")],
+            )
+            .properties(width=300, height=250, title="F1-Score: TF-IDF vs SBERT")
+        )
+        st.altair_chart(chart, use_container_width=True)
+
     # ── Info ──
     st.markdown("---")
     st.subheader("⚙️ Informações do Modelo")

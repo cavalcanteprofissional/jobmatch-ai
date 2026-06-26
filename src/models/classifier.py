@@ -5,6 +5,7 @@ from typing import Optional
 import joblib
 import numpy as np
 from scipy.special import expit
+from scipy.sparse import issparse
 from sklearn.ensemble import (
     ExtraTreesClassifier,
     RandomForestClassifier,
@@ -20,6 +21,8 @@ from sklearn.model_selection import (
     StratifiedKFold,
     cross_val_score,
 )
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neural_network import MLPClassifier
 from sklearn.svm import LinearSVC
 from xgboost import XGBClassifier
 
@@ -29,11 +32,28 @@ try:
 except ImportError:
     _HAS_LGBM = False
 
+try:
+    from catboost import CatBoostClassifier
+    _HAS_CATBOOST = True
+except ImportError:
+    _HAS_CATBOOST = False
+
+try:
+    from sentence_transformers import SentenceTransformer
+    _HAS_SBERT = True
+except ImportError:
+    _HAS_SBERT = False
+
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
 CLASSIFIER_PATH = Path("data/models/classifier.pkl")
+
+
+def _to_dense(X):
+    return X.toarray() if issparse(X) else X
+
 
 INDIVIDUAL_CANDIDATES: dict[str, tuple[type, dict]] = {
     "logistic_regression": (
@@ -57,6 +77,15 @@ INDIVIDUAL_CANDIDATES: dict[str, tuple[type, dict]] = {
         ExtraTreesClassifier,
         {"class_weight": "balanced", "n_jobs": -1, "random_state": 42},
     ),
+    "mlp": (
+        MLPClassifier,
+        {"max_iter": 300, "random_state": 42, "early_stopping": True,
+         "n_iter_no_change": 10},
+    ),
+    "gaussian_nb": (
+        GaussianNB,
+        {},
+    ),
 }
 
 if _HAS_LGBM:
@@ -64,6 +93,12 @@ if _HAS_LGBM:
         LGBMClassifier,
         {"random_state": 42, "verbosity": -1, "n_jobs": -1,
          "class_weight": "balanced"},
+    )
+
+if _HAS_CATBOOST:
+    INDIVIDUAL_CANDIDATES["catboost"] = (
+        CatBoostClassifier,
+        {"random_seed": 42, "verbose": 0, "allow_writing_files": False},
     )
 
 HYPERPARAM_GRIDS: dict[str, dict] = {
@@ -90,6 +125,14 @@ HYPERPARAM_GRIDS: dict[str, dict] = {
         "max_depth": [5, 10, None],
         "min_samples_split": [2, 5],
     },
+    "mlp": {
+        "hidden_layer_sizes": [(64,), (128,), (64, 32)],
+        "alpha": [0.0001, 0.001],
+        "learning_rate_init": [0.001, 0.01],
+    },
+    "gaussian_nb": {
+        "var_smoothing": [1e-9, 1e-8, 1e-7],
+    },
 }
 
 if _HAS_LGBM:
@@ -99,6 +142,22 @@ if _HAS_LGBM:
         "learning_rate": [0.05, 0.1],
         "num_leaves": [31, 63],
     }
+
+if _HAS_CATBOOST:
+    HYPERPARAM_GRIDS["catboost"] = {
+        "depth": [4, 6, 8],
+        "learning_rate": [0.01, 0.1],
+        "iterations": [200, 500],
+    }
+
+
+DENSE_ONLY_MODELS = {"mlp", "gaussian_nb"}
+
+
+def _is_sparse_compatible(name: str, X) -> bool:
+    if not issparse(X):
+        return True
+    return name not in DENSE_ONLY_MODELS
 
 
 def _make_candidate(name: str) -> object:
@@ -116,6 +175,8 @@ def _make_stacking() -> StackingClassifier:
     ]
     if _HAS_LGBM:
         estimators.append(("lgbm", _make_candidate("lightgbm")))
+    if _HAS_CATBOOST:
+        estimators.append(("cb", _make_candidate("catboost")))
     return StackingClassifier(
         estimators=estimators,
         final_estimator=LogisticRegression(max_iter=1000, random_state=42),
@@ -133,6 +194,8 @@ def _make_voting() -> VotingClassifier:
     ]
     if _HAS_LGBM:
         estimators.append(("lgbm", _make_candidate("lightgbm")))
+    if _HAS_CATBOOST:
+        estimators.append(("cb", _make_candidate("catboost")))
     return VotingClassifier(estimators=estimators, voting="soft", n_jobs=-1)
 
 
@@ -160,6 +223,9 @@ def train_best(
 
     logger.info("Avaliando classificadores candidatos...")
     for name in ALL_CANDIDATES:
+        if not _is_sparse_compatible(name, X_train):
+            logger.debug("  %-25s incompatível com matriz sparse, pulando", name)
+            continue
         model = _get_model(name)
         try:
             scores = cross_val_score(model, X_train, y_train, cv=cv, scoring="f1")
@@ -219,6 +285,9 @@ def train_nested_cv_clf(
         fold_best_params = {}
 
         for name in ALL_CANDIDATES:
+            if not _is_sparse_compatible(name, X_train_fold):
+                logger.debug("  %-25s incompatível com matriz sparse, pulando", name)
+                continue
             base = _get_model(name)
             grid = HYPERPARAM_GRIDS.get(name, {})
 

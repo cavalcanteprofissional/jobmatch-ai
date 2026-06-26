@@ -55,6 +55,12 @@ class PredictRequest(BaseModel):
         default=40.0, ge=10.0, le=90.0,
         description="Score mínimo (%) para classificar como Fit",
     )
+    use_sbert: bool = Field(
+        default=False, description="Usar Sentence-BERT em vez de TF-IDF",
+    )
+    use_cross_encoder: bool = Field(
+        default=False, description="Re-ranking com Cross-Encoder (mais preciso)",
+    )
 
 
 class HealthResponse(BaseModel):
@@ -131,6 +137,8 @@ async def predict(req: PredictRequest):
             resume_text=req.resume_text,
             top_k=req.top_k,
             fit_threshold=req.fit_threshold,
+            use_sbert=req.use_sbert,
+            use_cross_encoder=req.use_cross_encoder,
         )
         logger.info(
             "POST /predict: top_k=%s, score=%.1f%%, fit=%s",

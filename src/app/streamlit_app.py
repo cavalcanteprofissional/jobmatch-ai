@@ -9,6 +9,7 @@ import os
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -20,6 +21,27 @@ logger = setup_logger("streamlit_app")
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 USE_API = os.getenv("STREAMLIT_USE_API", "true").lower() == "true"
+
+
+def extract_text_from_pdf(file) -> str:
+    try:
+        import PyPDF2
+        reader = PyPDF2.PdfReader(file)
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
+    except Exception as e:
+        logger.warning("Erro extraindo PDF: %s", e)
+        return ""
+
+
+def extract_text_from_docx(file) -> str:
+    try:
+        import docx
+        doc = docx.Document(file)
+        return "\n".join(p.text for p in doc.paragraphs)
+    except Exception as e:
+        logger.warning("Erro extraindo DOCX: %s", e)
+        return ""
+
 
 if USE_API:
     try:
@@ -87,26 +109,46 @@ def load_models_direct():
     return vec, clf, sal, jobs, jobs_matrix
 
 
-def predict_via_api(resume_text: str, top_k: int, threshold: float) -> dict:
+def predict_via_api(resume_text: str, top_k: int, threshold: float,
+                    use_sbert: bool = False, use_cross_encoder: bool = False) -> dict:
     response = client.post("/predict", json={
         "resume_text": resume_text,
         "top_k": top_k,
         "fit_threshold": threshold,
+        "use_sbert": use_sbert,
+        "use_cross_encoder": use_cross_encoder,
     })
     response.raise_for_status()
     return response.json()
 
 
-def predict_direct(resume_text: str, top_k: int, threshold: float) -> dict:
+def predict_direct(resume_text: str, top_k: int, threshold: float,
+                   use_sbert: bool = False, use_cross_encoder: bool = False) -> dict:
     vec, clf, sal, jobs_df, jobs_matrix = load_models_direct()
 
     resume_clean = clean_text(resume_text)
-    resume_vec = transform([resume_clean], vec)
+
+    if use_sbert:
+        try:
+            from src.models.vectorizer import SentenceBertVectorizer
+            sbert = joblib.load("data/models/sentence_bert.pkl")
+            clf_sbert = joblib.load("data/models/classifier_sbert.pkl")
+            jobs_sbert = np.load("data/models/jobs_sbert_embeddings.npy")
+            resume_vec = sbert.transform([resume_clean])
+            jobs_matrix = jobs_sbert
+            clf = clf_sbert
+        except Exception as e:
+            logger.warning("SBERT não disponível, usando TF-IDF: %s", e)
 
     fit_label, fit_prob = classify(resume_vec, clf)
     score_pct = round(fit_prob * 100, 1)
 
-    top_jobs = rank_jobs(resume_vec, jobs_matrix, jobs_df, top_k=top_k, fit_threshold=threshold)
+    top_jobs = rank_jobs(
+        resume_vec, jobs_matrix, jobs_df,
+        top_k=top_k, fit_threshold=threshold,
+        resume_text=resume_text,
+        use_cross_encoder=use_cross_encoder,
+    )
 
     best_job_idx = top_jobs.index[0]
     best_job_vec = transform([jobs_df.loc[best_job_idx, "full_text"]], vec)
@@ -114,12 +156,37 @@ def predict_direct(resume_text: str, top_k: int, threshold: float) -> dict:
 
     gap = analyze_gap(resume_text, top_jobs.iloc[0]["title"])
 
+    job_scores = []
+    all_unique_required = set()
+    all_unique_compat = set()
+    for _, row in top_jobs.iterrows():
+        title = row.get("title", "")
+        g = analyze_gap(resume_text, title)
+        compat = set(g["compatible"])
+        missing = set(g["missing"])
+        total = len(compat) + len(missing)
+        all_unique_required.update(compat, missing)
+        all_unique_compat.update(compat)
+        if total > 0:
+            job_scores.append(len(compat) / total * 100)
+    if job_scores:
+        employability_score = round(
+            sum(job_scores) / len(job_scores), 1
+        )
+    elif all_unique_required:
+        employability_score = round(
+            len(all_unique_compat) / len(all_unique_required) * 100, 1
+        )
+    else:
+        employability_score = 0.0
+
     return {
         "fit_label": fit_label,
         "score_pct": score_pct,
         "avg_adherence": round(top_jobs["adherence_score"].mean(), 1),
         "fit_count": int((top_jobs["adherence_score"] >= threshold).sum()),
         "top_k": top_k,
+        "employability_score": employability_score,
         "salary_est": salary_est,
         "gap": gap,
         "top_jobs": top_jobs.reset_index().to_dict(orient="records"),
@@ -138,10 +205,20 @@ with st.sidebar:
         help="Score mínimo para classificar como Fit",
     )
     show_plan = st.checkbox("Mostrar plano de desenvolvimento", value=True)
+    use_sbert = st.checkbox(
+        "Sentence-BERT (embedding semântico, ~3s extra)",
+        value=False,
+        help="Usa Sentence-BERT em vez de TF-IDF para maior precisão semântica",
+    )
+    use_cross_encoder = st.checkbox(
+        "Re-ranking com Cross-Encoder (mais preciso, ~2s extra)",
+        value=False,
+        help="Re-ordena as vagas usando um modelo neural cross-encoder",
+    )
     st.markdown("---")
     st.markdown("**Como usar:**")
     st.markdown(
-        "1. Cole seu currículo ou descreva seu perfil\n"
+        "1. Faça upload do currículo (PDF/DOCX) ou cole o texto\n"
         "2. Clique em **Analisar**\n"
         "3. Veja suas vagas ideais!"
     )
@@ -152,15 +229,30 @@ st.markdown("---")
 
 col_input, col_tip = st.columns([3, 1])
 with col_input:
-    resume_text = st.text_area(
-        "📄 Cole seu currículo ou descreva seu perfil profissional:",
-        height=280,
-        placeholder="Exemplo:\n"
-        "Sou Analista de Dados com 3 anos de experiência em Python, SQL e Power BI...",
+    uploaded_file = st.file_uploader(
+        "📎 Ou faça upload do currículo (PDF/DOCX):",
+        type=["pdf", "docx"],
+        label_visibility="collapsed",
     )
+    if uploaded_file is not None:
+        if uploaded_file.name.endswith(".pdf"):
+            resume_text = extract_text_from_pdf(uploaded_file)
+        elif uploaded_file.name.endswith(".docx"):
+            resume_text = extract_text_from_docx(uploaded_file)
+        else:
+            resume_text = ""
+        st.success(f"✅ Arquivo '{uploaded_file.name}' extraído ({len(resume_text)} caracteres)")
+    else:
+        resume_text = st.text_area(
+            "📄 Cole seu currículo ou descreva seu perfil profissional:",
+            height=280,
+            placeholder="Exemplo:\n"
+            "Sou Analista de Dados com 3 anos de experiência em Python, SQL e Power BI...",
+        )
 with col_tip:
     st.info(
         "💡 **Dicas:**\n\n"
+        "• Faça upload do PDF/DOCX ou cole o texto\n"
         "• Inclua suas tecnologias\n"
         "• Mencione cargos anteriores\n"
         "• Liste certificações\n"
@@ -178,10 +270,14 @@ if run_btn and resume_text.strip():
     with st.spinner("Analisando seu perfil nas 124k+ vagas…"):
         try:
             if API_AVAILABLE:
-                result = predict_via_api(resume_text, top_k, fit_threshold)
+                result = predict_via_api(resume_text, top_k, fit_threshold,
+                                         use_sbert=use_sbert,
+                                         use_cross_encoder=use_cross_encoder)
                 logger.info("Predição via API concluída")
             else:
-                result = predict_direct(resume_text, top_k, fit_threshold)
+                result = predict_direct(resume_text, top_k, fit_threshold,
+                                        use_sbert=use_sbert,
+                                        use_cross_encoder=use_cross_encoder)
                 logger.info("Predição via modo direto concluída")
         except Exception as e:
             logger.error("Erro na análise: %s", e)
@@ -191,7 +287,7 @@ if run_btn and resume_text.strip():
     st.success("✅ Análise concluída!")
     st.markdown("---")
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown(
             f"""
@@ -213,6 +309,16 @@ if run_btn and resume_text.strip():
             unsafe_allow_html=True,
         )
     with c3:
+        st.markdown(
+            f"""
+            <div class="metric-card" style="background:linear-gradient(135deg,#667eea,#764ba2)">
+                <p>Empregabilidade</p>
+                <h1>{result.get('employability_score', 0):.1f}%</h1>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c4:
         sal = result["salary_est"]
         sal_fmt = f"${sal['range_low']:,.0f} – ${sal['range_high']:,.0f}"
         st.markdown(

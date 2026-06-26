@@ -1,8 +1,15 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 
-from src.models.vectorizer import fit_vectorizer, load_vectorizer, transform
+from src.models.vectorizer import (
+    SentenceBertVectorizer,
+    fit_vectorizer,
+    load_sbert_vectorizer,
+    load_vectorizer,
+    transform,
+)
 
 
 class TestFitVectorizer:
@@ -55,3 +62,60 @@ class TestTransform:
         matrix = transform(new_texts, vec)
         assert matrix.shape[0] == 1
         assert matrix.nnz > 0
+
+
+# ── Fase 5 — SBERT Tests ──────────────────────────────────────────
+
+
+class TestSentenceBertVectorizer:
+    def test_sbert_init(self):
+        sbert = SentenceBertVectorizer(model_name="fake-model")
+        assert sbert.model_name == "fake-model"
+        assert sbert._model is None
+
+    def test_sbert_transform_mock(self, mock_sbert):
+        sbert = SentenceBertVectorizer(model_name="mock-model")
+        texts = ["data science python tensorflow"]
+        emb = sbert.transform(texts)
+        assert isinstance(emb, np.ndarray)
+        assert emb.shape == (1, 384)
+        assert np.isfinite(emb).all()
+
+    def test_sbert_fit_save(self, mock_sbert, tmp_path):
+        from src.models.vectorizer import SBERT_EMBEDDINGS_PATH
+        original_emb_path = SBERT_EMBEDDINGS_PATH
+        sbert = SentenceBertVectorizer(model_name="mock-model")
+        texts = ["text one", "text two", "text three"]
+        save_path = tmp_path / "sbert.pkl"
+        result = sbert.fit(texts, save_path=save_path)
+        assert result is sbert
+        assert save_path.exists()
+        loaded_emb = np.load(SBERT_EMBEDDINGS_PATH)
+        assert loaded_emb.shape == (3, 384)
+
+    def test_sbert_load_embeddings(self, mock_sbert, tmp_path):
+        sbert = SentenceBertVectorizer(model_name="mock-model")
+        texts = ["hello world"]
+        sbert.fit(texts, save_path=tmp_path / "sbert.pkl")
+        emb = sbert.load_embeddings()
+        assert isinstance(emb, np.ndarray)
+        assert emb.shape[1] == 384
+
+    def test_load_sbert_vectorizer(self, mock_sbert, tmp_path):
+        from joblib import dump
+
+        sbert = SentenceBertVectorizer(model_name="mock-model")
+        save_path = tmp_path / "sbert.pkl"
+        dump(sbert, save_path)
+        loaded = load_sbert_vectorizer(save_path)
+        assert isinstance(loaded, SentenceBertVectorizer)
+        assert loaded.model_name == "mock-model"
+
+    @pytest.mark.slow
+    def test_sbert_consistency_real(self):
+        sbert = SentenceBertVectorizer()
+        texts = ["data science with python and tensorflow"]
+        emb1 = sbert.transform(texts)
+        emb2 = sbert.transform(texts)
+        diff = np.linalg.norm(emb1 - emb2)
+        assert diff < 1e-5, f"Embeddings inconsistentes: norma L2 = {diff}"

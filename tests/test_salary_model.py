@@ -6,7 +6,12 @@ import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
-from src.models.salary_model import predict_salary_range
+from src.models.salary_model import (
+    DENSE_ONLY_MODELS,
+    INDIVIDUAL_CANDIDATES,
+    predict_salary_range,
+    train_nested_cv_reg,
+)
 
 
 class TestPredictSalaryRange:
@@ -42,3 +47,24 @@ class TestPredictSalaryRange:
         assert isinstance(result["estimated_annual_usd"], int)
         assert isinstance(result["range_low"], int)
         assert isinstance(result["range_high"], int)
+
+
+# ── Fase 5 — MLPRegressor + Nested CV ─────────────────────────────
+
+
+class TestMLPRegressor:
+    def test_mlp_reg_in_candidates(self):
+        assert "mlp" in INDIVIDUAL_CANDIDATES
+
+    def test_mlp_reg_dense_only(self):
+        assert "mlp" in DENSE_ONLY_MODELS
+
+    def test_nested_cv_reg_returns_tuple(self, dense_matrix, dense_reg_target):
+        name, params, scores, model = train_nested_cv_reg(
+            dense_matrix, dense_reg_target, outer_cv=2, inner_cv=2, n_iter=4,
+        )
+        assert isinstance(name, str)
+        assert isinstance(params, dict)
+        assert isinstance(scores, list)
+        assert len(scores) == 2
+        assert hasattr(model, "predict")

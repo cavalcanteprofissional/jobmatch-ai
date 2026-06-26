@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jobmatch-ai"
-version = "0.6.0"
+version = "0.7.0"
 description = "Sistema de ML para matching inteligente entre currículos e vagas de emprego"
 authors = ["Residência Prática TIC 44 - UFC"]
 license = "MIT"
@@ -26,6 +26,8 @@ lightgbm = ">=4.5"
 catboost = {version = ">=1.2", optional = true}
 spacy = {version = ">=3.7", optional = true}
 sentence-transformers = {version = ">=3.0", optional = true}
+PyPDF2 = ">=3.0"
+python-docx = ">=1.1"
 fastapi = ">=0.109"
 uvicorn = {extras = ["standard"], version = ">=0.27"}
 httpx = ">=0.27"
@@ -61,7 +63,7 @@ omit = [
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 55
+fail_under = 60
 exclude_lines = [
     "if __name__ == .__main__.:",
     "pragma: no cover",
