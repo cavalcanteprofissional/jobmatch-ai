@@ -5,10 +5,10 @@ Sistema de Machine Learning para matching inteligente entre currículos e vagas 
 ## Funcionalidades
 
 - **Score de Aderência**: Similaridade cosseno entre currículo e vagas via TF-IDF
-- **Classificação Fit/No Fit**: Classificador binário (LogisticRegression / RandomForest / LinearSVC) com seleção automática por F1
+- **Classificação Fit/No Fit**: Classificador binário (XGBoost / LightGBM / ExtraTrees / RF / SVM / LR) com seleção automática via nested CV + tuning
 - **Top-5 Vagas**: Ranking das vagas mais compatíveis com o perfil
-- **Skills Gap Analysis**: Identifica skills faltantes e sugere plano de desenvolvimento
-- **Estimativa Salarial**: Regressão (GradientBoosting / RandomForest) para prever faixa salarial por cargo
+- **Skills Gap Analysis**: Identifica skills faltantes (922 títulos mapeados, 20.6k skills) e sugere plano de desenvolvimento com sinônimos
+- **Estimativa Salarial**: Regressão (VotingEnsemble: GB + RF + XGB + ET + LGBM) para prever faixa salarial por cargo
 - **API REST**: Endpoints FastAPI para predição, health check, info dos modelos e métricas
 - **Frontend Híbrido**: Streamlit que consome a API REST com fallback direto para os modelos
 - **Dashboard de Monitoramento**: Métricas em tempo real (latência, erros, requisições) + gráficos Altair do modelo ML (heatmap, histograma de scores, scatter salários)
@@ -128,17 +128,21 @@ poetry run pytest tests/ -v --cov=src
 
 ## Métricas Alvo
 
-| Tarefa | Métrica | Atual | Meta |
-|--------|---------|-------|------|
-| Classificação | F1-Score (macro) | 0.674 | ≥ 0.75 |
-| Ranking | NDCG@5 | — | ≥ 0.70 |
-| Regressão Salarial | RMSE | $35.041 | < $15.000 |
-| Similaridade | Precisão@5 | — | ≥ 0.60 |
+| Tarefa | Métrica | Atual | Melhor Modelo |
+|--------|---------|-------|---------------|
+| Classificação | F1-Score | **72.33%** | XGBoost |
+| Classificação | Acurácia | **71.82%** | XGBoost |
+| Classificação (Nested CV) | F1 médio | **70.92%** (±2.39pp) | XGBoost |
+| Regressão Salarial | RMSE | **$33.452** | VotingRegressor |
+| Regressão Salarial | R² | **40.09%** | VotingRegressor |
+| Regressão (Nested CV) | RMSE médio | **$39.662** (±$2.295) | VotingRegressor |
 
 ## Stack
 
 - Python 3.11–3.12
-- scikit-learn (TF-IDF, LogisticRegression, RandomForest, GradientBoosting, LinearSVC)
+- scikit-learn (TF-IDF, RF, LR, SVM, ExtraTrees, KNN, GB, stacking, voting)
+- XGBoost (classificação — melhor F1 72.33%)
+- LightGBM (classificação + regressão)
 - FastAPI + Uvicorn (REST API)
 - Streamlit + Altair (frontend híbrido + dashboard de monitoramento com gráficos)
 - Docker + Docker Compose (deploy)

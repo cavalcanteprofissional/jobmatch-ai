@@ -104,8 +104,26 @@ def build_skills_map(
     skills_df: pd.DataFrame,
     score_threshold: int = 80,
     save_path: Optional[Path] = None,
+    fuzzy_limit: int = 2000,
 ) -> dict:
-    skill_titles_set = set(skills_df["job_title"].dropna().str.lower().unique())
+    # Garantir que skills_df tenha job_title e skills
+    raw_skills_df = skills_df.copy()
+
+    # Se não tiver job_title, tentar merge com linkedin_job_postings
+    if "job_title" not in raw_skills_df.columns:
+        linkedin_path = RAW_DIR / "linkedin_job_postings.csv"
+        if linkedin_path.exists():
+            logger.info("Mergeando skills com linkedin_job_postings.csv...")
+            titles = pd.read_csv(
+                linkedin_path, usecols=["job_link", "job_title"], low_memory=False
+            )
+            raw_skills_df = raw_skills_df.merge(titles, on="job_link", how="left")
+
+    # Renomear coluna de skills
+    if "skills" not in raw_skills_df.columns and "job_skills" in raw_skills_df.columns:
+        raw_skills_df = raw_skills_df.rename(columns={"job_skills": "skills"})
+
+    skill_titles_set = set(raw_skills_df["job_title"].dropna().str.lower().unique())
     unique_titles = jobs_df["title"].dropna().unique().tolist()
 
     if not skill_titles_set:
@@ -116,39 +134,41 @@ def build_skills_map(
 
     # Passo 1: matching exato (rápido)
     logger.info("Match exato de %s títulos...", len(unique_titles))
-    exact_matches = []
+    matched_titles = []
     remaining = []
+    title_lower_map = {t.lower(): t for t in unique_titles if isinstance(t, str)}
+
     for title in unique_titles:
         if title.lower() in skill_titles_set:
-            exact_matches.append(title)
+            matched_titles.append(title)
         else:
             remaining.append(title)
 
-    logger.info("  Exatos: %s | Restantes: %s", len(exact_matches), len(remaining))
+    logger.info("  Exatos: %s | Restantes: %s", len(matched_titles), len(remaining))
 
-    # Passo 2: fuzzy match apenas nos restantes (limitado para performance)
-    fuzzy_limit = min(500, len(remaining))
-    fuzzy_sample = remaining[:fuzzy_limit]
-    skill_titles_list = sorted(skill_titles_set)
+    # Passo 2: fuzzy match (sem limite artificial agressivo)
+    actual_fuzzy_limit = min(fuzzy_limit, len(remaining))
+    if actual_fuzzy_limit > 0:
+        fuzzy_sample = remaining[:actual_fuzzy_limit]
+        skill_titles_list = sorted(skill_titles_set)
 
-    if fuzzy_sample:
         logger.info(
             "Fuzzy match de %s títulos (amostra de %s restantes)...",
-            fuzzy_limit, len(remaining),
+            actual_fuzzy_limit, len(remaining),
         )
         for title in tqdm(fuzzy_sample, desc="Fuzzy títulos"):
             match, score, _ = process.extractOne(
                 title, skill_titles_list, scorer=fuzz.token_sort_ratio
             )
             if score >= score_threshold:
-                exact_matches.append(title)
+                matched_titles.append(title)
 
-    # Passo 3: montar mapa a partir dos matches (exatos + fuzzy)
-    skill_lookup = skills_df.dropna(subset=["job_title"]).copy()
+    # Passo 3: montar mapa a partir dos matches
+    skill_lookup = raw_skills_df.dropna(subset=["job_title"]).copy()
     skill_lookup["job_title_lower"] = skill_lookup["job_title"].str.lower()
     skill_lookup = skill_lookup.drop_duplicates(subset="job_title_lower")
 
-    for title in exact_matches:
+    for title in matched_titles:
         matched = skill_lookup[skill_lookup["job_title_lower"] == title.lower()]
         if matched.empty:
             continue

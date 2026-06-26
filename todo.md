@@ -6,64 +6,68 @@
 |--------|--------|
 | Estrutura de diretórios | ✅ Concluído |
 | Pipeline de dados (preprocess, load, compose) | ✅ Concluído |
-| Modelos (vectorizer, classifier, recommender, salary) | ✅ Concluído |
-| Skills analyzer | ✅ Concluído |
+| Modelos (classifier, salary, recommender, vectorizer) | ✅ Concluído |
+| Skills analyzer (regex + gap analysis + sinônimos) | ✅ Concluído |
+| skills_map.json (922 títulos, 20.6k skills) | ✅ Populado |
+| Fase 2 (XGBoost + ExtraTrees + LightGBM + Ensemble) | ✅ Concluído |
+| Fase 3 (Skills NLP + sinônimos + resources) | ✅ Concluído |
 | Frontend Streamlit (híbrido API/direto) | ✅ Concluído |
-| API REST FastAPI (predict, health, models/info) | ✅ Concluído |
-| Logging estruturado (RotatingFileHandler) | ✅ Concluído |
-| Testes (78 testes, 67% cobertura) | ✅ Concluído |
-| Config Kaggle (.env.local, .gitignore, config.py) | ✅ Concluído |
-| Notebooks (EDA, pipeline, classificador, salário) | ✅ Concluído |
-| `train_pipeline.py` | ✅ Concluído |
+| API REST FastAPI (predict, health, models/info, metrics) | ✅ Concluído |
+| Testes (78 testes passando) | ✅ Concluído |
+| Dashboard Monitoramento (Altair + nested CV) | ✅ Concluído |
+| Docker / CI-CD | ✅ Concluído |
 
-## Pendentes (próximas versões)
+## Resultados Atuais (Fase 2 — com XGBoost + Ensemble + LightGBM)
 
-### Etapa 1 — Deploy da API (Docker)
-- [x] Dockerfile (multi-stage)
-- [x] docker-compose.yml (api + streamlit)
-- [x] .dockerignore
+### Classificação
+- **Melhor modelo**: **XGBoost** (max_depth=5, n_estimators=200, lr=0.05)
+- Nested CV (3×3): F1 médio = **70.92%** (±2.39pp)
+- Holdout: accuracy=71.82%, F1=**72.33%**, precision=70.55%, recall=74.19%
 
-### Etapa 2 — CI/CD (GitHub Actions)
-- [x] CI workflow (testes + coverage)
-- [x] Deploy workflow (Docker image)
+### Regressão
+- **Melhor modelo**: **VotingRegressor** (GB + RF + XGB + ET + LGBM)
+- Nested CV (3×2): RMSE médio = **$39.662** (±$2.295)
+- Holdout: RMSE=**$33.452**, MAE=$22.688, R²=**40.09%**
 
-### Etapa 3 — Dashboard de Monitoramento
-- [x] Middleware de métricas (FastAPI)
-- [x] Endpoint GET /metrics
-- [x] Página Streamlit de monitoramento
+## Skills NLP (Fase 3 — Concluída)
+- ✅ `skills_map.json`: 922 títulos mapeados, 20.607 skills, 46.5% das vagas
+- ✅ Sinonímia: 40+ grupos de sinônimos (ex: "tf" ↔ "tensorflow", "k8s" ↔ "kubernetes")
+- ✅ `_RESOURCES` expandido de 20 → 70+ skills com cursos recomendados
+- ✅ Matching multi-estratégia: regex + sinônimos + gap analysis
+- ✅ `jobs_clean.parquet` atualizado com `required_skills` preenchido
 
-### Etapa 4 — Testes de Integração com Dados Reais
-- [x] Testes @pytest.mark.slow com dados reais
-- [x] Integração na pipeline principal
+---
 
-### Etapa 5 — Validação / Teste Local do Dashboard
-- [x] Corrigir script de treino (caminho resume_jd_train.parquet + labels 3-classes)
-- [x] Treinar classificador Fit/No Fit + regressor de salário
-- [x] Iniciar API FastAPI (uvicorn) — http://localhost:8001
-- [x] Verificar endpoint /predict com curl — JSON válido, NaN tratados como null
-- [x] Verificar endpoint /metrics — uptime, total_requests, latência por endpoint
-- [x] Iniciar dashboard Streamlit de monitoramento — http://localhost:8501
+## Fase 4 — Neural Approaches + Embeddings (PRÓXIMA SESSÃO)
 
-### Etapa 6 — Dashboard Unificado (Modelo ML + API)
-- [x] `monitor_dashboard.py` reescrito com `st.tabs()`: aba "Modelo ML" (métricas de classificação e regressão) + aba "API" (requisições, latência, erros via GET /metrics)
-- [x] `train_pipeline.py` corrigido (label mapping "Good Fit"/"Potential Fit" → 1) e passou a salvar `metrics.json` automaticamente ao final do treino
+---
 
-### Etapa 7 — Dashboard com Gráficos Altair
-- [x] `scripts/reload_eval.py`: re-treina modelos em segundos (dados já pré-processados) + salva `eval_clf.parquet` (1249 amostras com y_true, y_pred, y_prob) e `eval_reg.parquet` (179 amostras com y_true, y_pred)
-- [x] `monitor_dashboard.py` — aba "Modelo ML" com:
-  - **Heatmap** da matriz de confusão (Altair, scale blues + contagens)
-  - **Barras** de métricas (Acurácia, F1, Precisão, Recall) com meta de 70%
-  - **Histograma** dos scores de decisão por classe verdadeira
-  - **Scatter** salário real × previsto com linha identidade
-  - **Histograma** dos resíduos (previsto − real)
-  - KPIs e informações do modelo (mantido)
-- [x] 78 testes passam (nada quebrado)
+### Sentence Embeddings
+- [ ] Adicionar `sentence-transformers` ao projeto
+- [ ] `src/models/vectorizer.py`: alternativa `fit_sentence_embeddings()` usando Sentence-BERT (`all-MiniLM-L6-v2`)
+- [ ] Comparar desempenho TF-IDF vs Sentence-BERT no classificador
+
+### Redes Neurais (requer embeddings densos)
+- [ ] **MLPClassifier** + **MLPRegressor** como candidatos no nested CV
+- [ ] **CatBoost** + **GaussianNB** para classificação
+- [ ] Grids de hiperparâmetros para modelos densos
+
+### Cross-encoder para Re-ranking
+- [ ] (Opcional) Re-ranking das top-10 vagas com cross-encoder
+
+### Upload de Currículo
+- [ ] Upload de PDF/DOCX via `st.file_uploader` + extração de texto (PyPDF2 + python-docx)
+- [ ] Comparar skills com múltiplas vagas (não só a #1)
+- [ ] Score de empregabilidade: % de skills do candidato vs mercado
+
+---
 
 ## Decisões Técnicas
 
 | Decisão | Escolha | Motivo |
 |---------|---------|--------|
-| Vetorização | TF-IDF (sklearn) | Fase inicial, sem LLMs |
+| Vetorização principal | TF-IDF (sklearn) | Fase inicial, sem LLMs |
+| Vetorização alternativa | Sentence-BERT (sentence-transformers) | Embeddings semânticos para Fase 4 |
 | Serialização | joblib | Padrão sklearn |
 | Formato dados | Parquet (pyarrow) | Eficiente para colunas textuais |
 | Fuzzy match | rapidfuzz | Mais rápido que fuzzywuzzy |
@@ -71,4 +75,4 @@
 | Python | >=3.11,<3.13 | Compatibilidade com dependências |
 | Gerenciamento | Poetry | Reprodutibilidade de ambiente |
 | Testes | pytest + pytest-cov | 78 testes, fail_under=55% |
-| Credenciais | python-dotenv + .env.local | Segurança, sem versionar segredos |
+| NLP | spaCy (Fase 3) + NLTK (atual) | POS-aware lemmatization + NER |

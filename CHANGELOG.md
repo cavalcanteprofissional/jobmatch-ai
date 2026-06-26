@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.7.0] — 2026-06-25
+
+### Adicionado
+- **Novos algoritmos de classificação** — XGBoost, LightGBM, ExtraTrees, SGD, KNN, DecisionTree como candidatos no nested CV
+- **Novos algoritmos de regressão** — LightGBM, ExtraTrees, SGD, KNN, DecisionTree como candidatos no nested CV
+- **Ensembles expandidos** — Stacking e Voting agora incluem ExtraTrees e LightGBM como base estimators
+- **Sinonímia de skills** — 40+ grupos de sinônimos (ex: "tf"↔"tensorflow", "k8s"↔"kubernetes", "ml"↔"machine learning")
+- **`_RESOURCES` expandido** — De 20 para 70+ skills com cursos e tempo estimado
+- **`skills_map.json` populado** — 922 títulos mapeados, 20.607 skills, 46.5% das vagas com required_skills
+- **`scripts/build_skills_map.py`** — Script dedicado para construção do skills map com merge de datasets
+- **Dependências opcionais** — LightGBM, CatBoost, spaCy, sentence-transformers em grupos opcionais
+
+### Alterado
+- `src/models/classifier.py` — 8 candidatos (LR, RF, SVM, XGB, ET, LGBM, stacking, voting); nested CV com inner_cv=3, n_iter=15; try/except em treino para robustez
+- `src/models/salary_model.py` — 7 regressores (GB, RF, XGB, ET, LGBM, stacking, voting); mesma estrutura robusta
+- `src/skills/skills_analyzer.py` — `_SYNONYMS` (40+ grupos), `_RESOURCES` (70+), extração multi-estratégia
+- `src/pipeline/compose_datasets.py` — `build_skills_map` com merge + fallback + fuzzy_limit configurável
+- `scripts/reload_eval.py` — inner_cv=3, n_iter=15, fallback de predict_proba/decision_function
+- `pyproject.toml` — Versão 0.7.0, lightgbm como dependência, grupos opcionais NLP
+- `README.md` — Stack, métricas e instruções atualizadas
+- `todo.md` — Status atualizado com Fase 2 e 3 concluídas
+
+### Resultados
+- **Classificação**: XGBoost venceu — F1=72.33% (↑ vs 71.70%), Nested CV F1=70.92%
+- **Regressão**: VotingRegressor venceu — RMSE=$33.452 (↓ 3.8%), R²=40.09% (↑ 4.85pp)
+
 ## [0.6.0] — 2026-06-25
 
 ### Adicionado

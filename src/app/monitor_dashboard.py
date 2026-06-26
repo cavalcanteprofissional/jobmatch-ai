@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 
 import altair as alt
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -195,6 +196,37 @@ def residual_hist(eval_reg: pd.DataFrame) -> alt.Chart:
     return hist
 
 
+def nested_cv_chart(scores: list[float], label: str, higher_better: bool) -> alt.Chart:
+    df = pd.DataFrame({"Fold": [f"{i+1}" for i in range(len(scores))], "Score": scores})
+    bar = (
+        alt.Chart(df)
+        .mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
+        .encode(
+            x=alt.X("Fold:O", title="Fold", sort=None),
+            y=alt.Y("Score:Q", title=label),
+            color=alt.condition(
+                alt.datum.Score >= (alt.expr if higher_better else 0),
+                alt.value("#2ca02c"),
+                alt.value("#d62728"),
+            ),
+            tooltip=[alt.Tooltip("Score:Q", format=".4f")],
+        )
+        .properties(width=400, height=250, title=f"Nested CV — {label}")
+    )
+    mean_val = float(np.mean(scores))
+    rule = (
+        alt.Chart(pd.DataFrame({"y": [mean_val]}))
+        .mark_rule(stroke="blue", strokeDash=[6, 3], strokeWidth=1.5)
+        .encode(y="y:Q")
+    )
+    text = (
+        alt.Chart(pd.DataFrame({"label": [f"Média: {mean_val:.4f}"]}))
+        .mark_text(x=410, y=mean_val, align="left", fontSize=11, color="blue")
+        .encode(y=alt.value(0))
+    )
+    return bar + rule + text
+
+
 def render_ml_tab(metrics: dict, eval_clf: pd.DataFrame | None, eval_reg: pd.DataFrame | None) -> None:
     clf = metrics["classification"]
     reg = metrics["regression"]
@@ -229,6 +261,24 @@ def render_ml_tab(metrics: dict, eval_clf: pd.DataFrame | None, eval_reg: pd.Dat
             hist = probability_hist(eval_clf)
             st.altair_chart(hist, use_container_width=True)
 
+    # ── Nested CV (Classificação) ──
+    if "nested_cv" in clf:
+        st.markdown("---")
+        st.subheader("🎯 Validação Cruzada Aninhada (Nested CV)")
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            nc = clf["nested_cv"]
+            chart = nested_cv_chart(nc["scores"], "F1 Score", higher_better=True)
+            st.altair_chart(chart, use_container_width=True)
+        with c2:
+            st.metric("F1 Médio (nested)", f"{nc['mean']:.2%}")
+            st.metric("Desvio Padrão", f"±{nc['std']:.2%}")
+            st.metric("Melhor Fold", f"{max(nc['scores']):.2%}")
+            st.metric("Pior Fold", f"{min(nc['scores']):.2%}")
+            if "best_params" in clf:
+                with st.expander("Melhores Hiperparâmetros"):
+                    st.json(clf["best_params"])
+
     # ── Regressão ──
     st.markdown("---")
     st.subheader("💰 Regressão Salarial")
@@ -247,6 +297,24 @@ def render_ml_tab(metrics: dict, eval_clf: pd.DataFrame | None, eval_reg: pd.Dat
         with c2:
             resid = residual_hist(eval_reg)
             st.altair_chart(resid, use_container_width=True)
+
+    # ── Nested CV (Regressão) ──
+    if "nested_cv" in reg:
+        st.markdown("---")
+        st.subheader("🎯 Nested CV — Regressão")
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            nr = reg["nested_cv"]
+            chart = nested_cv_chart(nr["scores"], "RMSE ($)", higher_better=False)
+            st.altair_chart(chart, use_container_width=True)
+        with c2:
+            st.metric("RMSE Médio (nested)", f"${nr['mean']:,.2f}")
+            st.metric("Desvio Padrão", f"±${nr['std']:,.2f}")
+            st.metric("Melhor Fold", f"${min(nr['scores']):,.2f}")
+            st.metric("Pior Fold", f"${max(nr['scores']):,.2f}")
+            if "best_params" in reg:
+                with st.expander("Melhores Hiperparâmetros"):
+                    st.json(reg["best_params"])
 
     # ── Info ──
     st.markdown("---")
