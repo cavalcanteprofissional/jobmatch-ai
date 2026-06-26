@@ -350,7 +350,7 @@ def render_ml_tab(metrics: dict, eval_clf: pd.DataFrame | None, eval_reg: pd.Dat
     st.markdown("---")
     st.subheader("⚙️ Informações do Modelo")
     col = st.columns(4)
-    col[0].metric("Features TF-IDF", f"{info['vectorizer_features']:,}")
+    col[0].metric("Features TF-IDF", f"{info.get('vectorizer_features', 'N/A'):,}" if isinstance(info.get('vectorizer_features'), int) else info.get('vectorizer_features', 'N/A'))
     col[1].metric("Total de Vagas", f"{info['total_jobs']:,}")
     col[2].metric("Vagas c/ Salário", f"{info['jobs_with_salary']:,}")
     col[3].metric("Pares de Treino", f"{info['training_pairs']:,}")

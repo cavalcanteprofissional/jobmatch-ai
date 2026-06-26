@@ -194,6 +194,7 @@ metrics = {
     "regression": reg_metrics,
     "model_info": {
         "vectorizer": "tfidf",
+        "vectorizer_features": vec.max_features,
         "total_jobs": len(jobs),
         "jobs_with_salary": len(has_salary),
         "training_pairs": len(pairs),

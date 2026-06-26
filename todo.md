@@ -93,6 +93,11 @@
 
 **Impacto:** Redução drástica do número de fits por fold. Stacking/Voting só entram no treino final (não no nested CV). `n_jobs=2` evita thrashing de memória.
 
+### Correção de Compatibilidade metrics.json (26/06)
+- [x] `reload_eval.py` não salvava `vectorizer_features` no `model_info`, causando `KeyError` no `monitor_dashboard.py`
+- [x] Adicionado `"vectorizer_features": vec.max_features` no `model_info` do `reload_eval.py`
+- [x] `monitor_dashboard.py` passou a usar `.get('vectorizer_features', 'N/A')` como fallback defensivo
+
 ---
 
 ## Fase 5 — Testes da Fase 4 (CONCLUÍDA)
