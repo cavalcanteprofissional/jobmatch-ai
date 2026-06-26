@@ -5,6 +5,7 @@ Roda em ~2-5 minutos (dados ja pre-processados).
 """
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 import joblib
@@ -38,8 +39,11 @@ PROCESSED_DIR = DATA_DIR / "processed"
 RAW_DIR = DATA_DIR / "raw"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
+def _ts():
+    return datetime.now().strftime("%H:%M:%S")
+
 # ── 1. Classificacao (Fit x No Fit) ──────────────────────────────
-print("[1/5] Carregando pares curriculo-vaga...")
+print(f"[{_ts()}] [1/5] Carregando pares curriculo-vaga...")
 pairs = pd.read_parquet(RAW_DIR / "resume_jd_train.parquet")
 label_map = {"Good Fit": 1, "Potential Fit": 1, "No Fit": 0}
 pairs["label_bin"] = pairs["label"].map(label_map)
@@ -54,11 +58,11 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 # ── 1a. TF-IDF path ──────────────────────────────────────────────
-print("[2/5] Vetorizando TF-IDF (15k features)...")
+print(f"[{_ts()}] [2/5] Vetorizando TF-IDF (15k features)...")
 vec = TfidfVectorizer(max_features=15_000, stop_words="english")
 X_vec = vec.fit_transform(X_text)
 
-print("[3/5] Treinando classificador com TF-IDF (nested CV)...")
+print(f"[{_ts()}] [3/5] Treinando classificador com TF-IDF (nested CV)...")
 clf_name, clf_params, clf_cv_scores, clf = train_nested_cv_clf(
     X_vec, y, outer_cv=2, inner_cv=2, n_iter=8, random_state=42,
 )
@@ -107,10 +111,11 @@ print(f"  -> eval_clf.parquet ({len(eval_clf)} linhas)")
 print(f"  -> Nested CV F1: {clf_cv_scores}")
 
 # ── 1b. Sentence-BERT path (todos os modelos, incluindo MLP/GaussianNB) ──
-print("[3b/5] Treinando classificador com Sentence-BERT...")
+print(f"[{_ts()}] [3b/5] Treinando classificador com Sentence-BERT...")
 try:
     sbert = SentenceBertVectorizer()
-    X_dense = sbert.fit_transform(X_text)
+    sbert.fit(X_text)
+    X_dense = sbert.transform(X_text)
     clf_sbert_name, clf_sbert_params, clf_sbert_scores, clf_sbert = train_nested_cv_clf(
         X_dense, y, outer_cv=2, inner_cv=2, n_iter=8, random_state=42,
     )
@@ -126,7 +131,7 @@ try:
         "nested_cv_mean": round(float(np.mean(clf_sbert_scores)), 4),
         "best_candidate": clf_sbert_name,
     }
-        joblib.dump(sbert, MODELS_DIR / "sentence_bert.pkl")
+    joblib.dump(sbert, MODELS_DIR / "sentence_bert.pkl")
     joblib.dump(clf_sbert, MODELS_DIR / "classifier_sbert.pkl")
     X_jobs_sbert = sbert.transform(jobs["full_text"].fillna("").tolist())
     np.save(MODELS_DIR / "jobs_sbert_embeddings.npy", X_jobs_sbert)
@@ -136,7 +141,7 @@ except Exception as e:
     logger.warning("Sentence-BERT path falhou: %s", e)
 
 # ── 2. Regressao Salarial ────────────────────────────────────────
-print("[4/5] Treinando regressao salarial (nested CV)...")
+print(f"[{_ts()}] [4/5] Treinando regressao salarial (nested CV)...")
 jobs = pd.read_parquet(PROCESSED_DIR / "jobs_clean.parquet")
 has_salary = jobs.dropna(subset=["salary_annual_avg"])
 X_sal = vec.transform(has_salary["full_text"].fillna(""))
@@ -174,7 +179,7 @@ print(f"  -> eval_reg.parquet ({len(eval_reg)} linhas)")
 print(f"  -> Nested CV RMSE: {reg_cv_scores}")
 
 # ── 3. Salvar ────────────────────────────────────────────────────
-print("[5/5] Salvando modelos e metricas...")
+print(f"[{_ts()}] [5/5] Salvando modelos e metricas...")
 
 joblib.dump(vec, MODELS_DIR / "tfidf_vectorizer.pkl")
 joblib.dump(clf, MODELS_DIR / "classifier.pkl")

@@ -16,6 +16,9 @@
 | Testes (78 testes passando) | ✅ Concluído |
 | Dashboard Monitoramento (Altair + nested CV) | ✅ Concluído |
 | Docker / CI-CD | ✅ Concluído |
+| Fase 4 (Neural: SBERT + MLP + Cross-encoder) | ✅ Concluído |
+| Fase 5 (Testes Fase 4 — ~95 testes, 85 rápidos + 4 slow + SBERT) | ✅ Concluído |
+| Correção travamento nested CV | ✅ Concluído |
 
 ## Resultados Atuais (Fase 2 — com XGBoost + Ensemble + LightGBM)
 
@@ -72,9 +75,27 @@
 - [x] `monitor_dashboard.py`: exibe comparação TF-IDF vs SBERT
 - [x] `reload_eval.py`: salva `classifier_sbert.pkl` + `jobs_sbert_embeddings.npy`
 
+### Correções de Performance — Nested CV Travando (26/06)
+**Diagnóstico:** `reload_eval.py` travava o computador durante o nested CV. Causas identificadas:
+
+1. **StackingClassifier/StackingRegressor dentro do nested CV** — Cada fold testava o stacking, que internamente re-treina 5-7 modelos com cv=2, criando um loop exponencial de treinos
+2. **Modelos demais** — 11 candidatos na classificação + 12 na regressão (incluindo MLP, GaussianNB que densificam a matriz, e ensembles)
+3. **`n_jobs=-1` em todos os modelos** — Paralelismo máximo saturava a RAM em máquinas com pouca memória
+
+**Soluções aplicadas:**
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/models/classifier.py` | Criado `NESTED_CV_CANDIDATES` — só modelos individuais e compatíveis com sparse (exclui stacking, voting, MLP, GaussianNB). `N_JOBS=2` |
+| `src/models/salary_model.py` | Criado `NESTED_CV_CANDIDATES` — só modelos individuais compatíveis (exclui stacking, voting, MLP). `N_JOBS=2` |
+| `scripts/reload_eval.py` | Adicionados timestamps (`[HH:MM:SS]`) em cada etapa para diagnóstico |
+| `train_nested_cv_clf/reg` | Usam `NESTED_CV_CANDIDATES` para dados sparse, `INDIVIDUAL_CANDIDATES` para densos. Retreino final ainda usa `ALL_CANDIDATES` |
+
+**Impacto:** Redução drástica do número de fits por fold. Stacking/Voting só entram no treino final (não no nested CV). `n_jobs=2` evita thrashing de memória.
+
 ---
 
-## Fase 5 — Testes da Fase 4 (PENDENTE)
+## Fase 5 — Testes da Fase 4 (CONCLUÍDA)
 
 **78 testes atuais — 0 cobrem componentes da Fase 4.**
 
@@ -92,55 +113,55 @@
 ---
 
 ### `conftest.py` — Novos Fixtures
-- [ ] `dense_matrix` (np.ndarray 50×10) — dado denso para MLP/GaussianNB
-- [ ] `sample_resume_with_skills` — texto real contendo skills do `skills_map.json`
-- [ ] `sample_job_titles` — lista de títulos existentes no `skills_map.json`
-- [ ] `mock_sbert` (fixture autouse) — `patch('sentence_transformers.SentenceTransformer')` que retorna embeddings 384-dim fixos
+- [x] `dense_matrix` (np.ndarray 50×10) — dado denso para MLP/GaussianNB
+- [x] `sample_resume_with_skills` — texto real contendo skills do `skills_map.json`
+- [x] `sample_job_titles` — lista de títulos existentes no `skills_map.json`
+- [x] `mock_sbert` (fixture autouse) — `patch('sentence_transformers.SentenceTransformer')` que retorna embeddings 384-dim fixos
 
 ---
 
 ### `test_vectorizer.py` — SBERT (6 unit + 1 slow)
-- [ ] **Unit** `test_sbert_init`: `SentenceBertVectorizer(model_name="fake")` armazena nome
-- [ ] **Unit** `test_sbert_transform_mock`: com `mock_sbert`, `transform(["texto"])` retorna array shape (1, 384)
-- [ ] **Unit** `test_sbert_fit_save`: `fit(texts, save_path=tmp_path)` salva `.pkl` e `.npy`
-- [ ] **Unit** `test_sbert_load_embeddings`: `load_embeddings()` lê `.npy` salvo
-- [ ] **Unit** `test_load_sbert_vectorizer`: `load_sbert_vectorizer(tmp_path / "sbert.pkl")` carrega objeto
-- [ ] **Slow** `test_sbert_consistency_real`: **real model** — mesmo texto 2x → mesmo embedding (norma L2 < 1e-5)
+- [x] **Unit** `test_sbert_init`: `SentenceBertVectorizer(model_name="fake")` armazena nome
+- [x] **Unit** `test_sbert_transform_mock`: com `mock_sbert`, `transform(["texto"])` retorna array shape (1, 384)
+- [x] **Unit** `test_sbert_fit_save`: `fit(texts, save_path=tmp_path)` salva `.pkl` e `.npy`
+- [x] **Unit** `test_sbert_load_embeddings`: `load_embeddings()` lê `.npy` salvo
+- [x] **Unit** `test_load_sbert_vectorizer`: `load_sbert_vectorizer(tmp_path / "sbert.pkl")` carrega objeto
+- [x] **Slow** `test_sbert_consistency_real`: **real model** — mesmo texto 2x → mesmo embedding (norma L2 < 1e-5)
 
 ---
 
 ### `test_classifier.py` — MLP + GaussianNB + nested CV (8 unit)
-- [ ] `test_mlp_in_candidates`: `"mlp"` em `INDIVIDUAL_CANDIDATES`
-- [ ] `test_gaussian_nb_in_candidates`: `"gaussian_nb"` em `INDIVIDUAL_CANDIDATES`
-- [ ] `test_dense_only_skips_sparse`: `_is_sparse_compatible("mlp", sparse=True)` → `False`
-- [ ] `test_dense_only_allows_dense`: `_is_sparse_compatible("mlp", dense=False)` → `True`
-- [ ] `test_nested_cv_clf_returns_tuple`: `train_nested_cv_clf(50 amostras densas, outer=2, inner=2)` retorna `(str, dict, list, model)`
-- [ ] `test_nested_cv_clf_all_dense_models`: nested CV com `dense_matrix` — MLP ou GaussianNB podem ser escolhidos
-- [ ] `test_mlp_grid_present`: `HYPERPARAM_GRIDS["mlp"]` com `hidden_layer_sizes`, `alpha`, `learning_rate_init`
-- [ ] `test_gaussian_nb_grid_present`: `HYPERPARAM_GRIDS["gaussian_nb"]` com `var_smoothing`
+- [x] `test_mlp_in_candidates`: `"mlp"` em `INDIVIDUAL_CANDIDATES`
+- [x] `test_gaussian_nb_in_candidates`: `"gaussian_nb"` em `INDIVIDUAL_CANDIDATES`
+- [x] `test_dense_only_skips_sparse`: `_is_sparse_compatible("mlp", sparse=True)` → `False`
+- [x] `test_dense_only_allows_dense`: `_is_sparse_compatible("mlp", dense=False)` → `True`
+- [x] `test_nested_cv_clf_returns_tuple`: `train_nested_cv_clf(50 amostras densas, outer=2, inner=2)` retorna `(str, dict, list, model)`
+- [x] `test_nested_cv_clf_all_dense_models`: nested CV com `dense_matrix` — MLP ou GaussianNB podem ser escolhidos
+- [x] `test_mlp_grid_present`: `HYPERPARAM_GRIDS["mlp"]` com `hidden_layer_sizes`, `alpha`, `learning_rate_init`
+- [x] `test_gaussian_nb_grid_present`: `HYPERPARAM_GRIDS["gaussian_nb"]` com `var_smoothing`
 
 ---
 
 ### `test_salary_model.py` — MLPRegressor (3 unit)
-- [ ] `test_mlp_reg_in_candidates`: `"mlp"` em `INDIVIDUAL_CANDIDATES` do salary_model
-- [ ] `test_mlp_reg_dense_only`: `DENSE_ONLY_MODELS` contém `"mlp"`
-- [ ] `test_nested_cv_reg_returns_tuple`: `train_nested_cv_reg(50 amostras densas, outer=2, inner=2)` retorna `(str, dict, list, model)`
+- [x] `test_mlp_reg_in_candidates`: `"mlp"` em `INDIVIDUAL_CANDIDATES` do salary_model
+- [x] `test_mlp_reg_dense_only`: `DENSE_ONLY_MODELS` contém `"mlp"`
+- [x] `test_nested_cv_reg_returns_tuple`: `train_nested_cv_reg(50 amostras densas, outer=2, inner=2)` retorna `(str, dict, list, model)`
 
 ---
 
 ### `test_recommender.py` — Cross-encoder (2 unit + 1 slow)
-- [ ] **Unit** `test_rerank_cross_encoder_mock`: com `mock_cross_encoder`, `rerank_with_cross_encoder()` retorna DataFrame ordenado
-- [ ] **Unit** `test_rank_jobs_cross_encoder_flag`: `rank_jobs(use_cross_encoder=True)` não quebra (fallback TF-IDF)
-- [ ] **Slow** `test_cross_encoder_real_scores`: **real model** — pares idênticos → score ≈ 100, pares opostos → score ≈ 0
+- [x] **Unit** `test_rerank_cross_encoder_mock`: com `mock_cross_encoder`, `rerank_with_cross_encoder()` retorna DataFrame ordenado
+- [x] **Unit** `test_rank_jobs_cross_encoder_flag`: `rank_jobs(use_cross_encoder=True)` não quebra (fallback TF-IDF)
+- [x] **Slow** `test_cross_encoder_real_scores`: **real model** — pares idênticos → score ≈ 100, pares opostos → score ≈ 0
 
 ---
 
 ### `test_predictor.py` — Employability + Flags (5 unit)
-- [ ] `test_employability_score_range`: `employability_score` entre 0–100
-- [ ] `test_employability_score_100`: texto com todas skills → score 100
-- [ ] `test_employability_score_0`: texto sem nenhuma skill → score 0
-- [ ] `test_predict_use_sbert_flag`: `predict(use_sbert=True)` funciona (fallback TF-IDF silencioso)
-- [ ] `test_predict_use_cross_encoder_flag`: `predict(use_cross_encoder=True)` funciona
+- [x] `test_employability_score_range`: `employability_score` entre 0–100
+- [x] `test_employability_score_100`: texto com todas skills → score 100
+- [x] `test_employability_score_0`: texto sem nenhuma skill → score 0
+- [x] `test_predict_use_sbert_flag`: `predict(use_sbert=True)` funciona (fallback TF-IDF silencioso)
+- [x] `test_predict_use_cross_encoder_flag`: `predict(use_cross_encoder=True)` funciona
 
 ---
 
@@ -148,11 +169,11 @@
 
 | Métrica | Atual | Meta |
 |---|---|---|
-| Total de testes | 78 | **~95** |
-| `fail_under` | 55% | **60%** |
-| Testes `@pytest.mark.slow` | 2 | **4** (2 SBERT + 2 cross-encoder) |
-| Cobertura Fase 4 | 0% | **100% dos componentes** |
-| Mock externo | Nenhum | `sentence-transformers` (SBERT + CrossEncoder) |
+| Total de testes | **~95** | ~95 |
+| `fail_under` | **60%** | 60% |
+| Testes `@pytest.mark.slow` | **4** (2 SBERT + 2 cross-encoder) | 4 |
+| Cobertura Fase 4 | **100% dos componentes** | 100% |
+| Mock externo | `sentence-transformers` (SBERT + CrossEncoder) | `sentence-transformers` (SBERT + CrossEncoder) |
 
 ---
 

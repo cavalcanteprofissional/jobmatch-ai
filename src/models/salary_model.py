@@ -39,6 +39,7 @@ logger = setup_logger(__name__)
 SALARY_MODEL_PATH = Path("data/models/salary_regressor.pkl")
 
 DENSE_ONLY_MODELS = {"mlp"}
+N_JOBS = 2
 
 
 def _is_sparse_compatible(name: str, X) -> bool:
@@ -196,6 +197,11 @@ ENSEMBLE_CANDIDATES: dict[str, object] = {
 
 ALL_CANDIDATES = list(INDIVIDUAL_CANDIDATES.keys()) + list(ENSEMBLE_CANDIDATES.keys())
 
+NESTED_CV_CANDIDATES = [
+    k for k in INDIVIDUAL_CANDIDATES
+    if k not in DENSE_ONLY_MODELS
+]
+
 
 def _get_model(name: str) -> object:
     if name in ENSEMBLE_CANDIDATES:
@@ -262,6 +268,8 @@ def train_nested_cv_reg(
     logger.info("Nested CV — Regressão (%d outer x %d inner)", outer_cv, inner_cv)
     logger.info("=" * 50)
 
+    candidates = NESTED_CV_CANDIDATES if issparse(X) else list(INDIVIDUAL_CANDIDATES.keys())
+
     for fold, (train_idx, test_idx) in enumerate(outer_kfold.split(X, y)):
         X_train_fold = X[train_idx]
         X_test_fold = X[test_idx]
@@ -274,7 +282,7 @@ def train_nested_cv_reg(
         fold_best_name = ""
         fold_best_params = {}
 
-        for name in ALL_CANDIDATES:
+        for name in candidates:
             if not _is_sparse_compatible(name, X_train_fold):
                 logger.debug("  %-25s incompatível com matriz sparse, pulando", name)
                 continue
@@ -287,7 +295,7 @@ def train_nested_cv_reg(
                     actual_n_iter = min(n_iter, grid_size)
                     use_grid = grid_size <= actual_n_iter
                     Searcher = GridSearchCV if use_grid else RandomizedSearchCV
-                    common = dict(cv=inner_cv, scoring="neg_root_mean_squared_error", n_jobs=-1, verbose=0)
+                    common = dict(cv=inner_cv, scoring="neg_root_mean_squared_error", n_jobs=N_JOBS, verbose=0)
                     if not use_grid:
                         common["random_state"] = random_state
                     if use_grid:
@@ -307,6 +315,7 @@ def train_nested_cv_reg(
                         y_train_fold,
                         cv=inner_cv,
                         scoring="neg_root_mean_squared_error",
+                        n_jobs=N_JOBS,
                     )
                     inner_score = rmse_scores.mean()
                     candidate_model = base

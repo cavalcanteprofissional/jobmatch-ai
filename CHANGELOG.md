@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.8.0] — 2026-06-26
+
+### Corrigido
+- **Travamento do `reload_eval.py` durante nested CV** — Causa: `StackingClassifier`/`StackingRegressor` dentro do nested CV criava treino exponencial (re-treinava 5-7 modelos internamente por fold). Adicionado `MLP` e `GaussianNB` que densificam a matriz sparse, agravando o problema. `n_jobs=-1` saturava a RAM.
+  - `classifier.py`: Criado `NESTED_CV_CANDIDATES` — apenas modelos individuais compatíveis com sparse (exclui stacking, voting, MLP, GaussianNB). `N_JOBS=2` para evitar thrashing.
+  - `salary_model.py`: Mesma estrutura — `NESTED_CV_CANDIDATES` sem stacking, voting, MLP. `N_JOBS=2`.
+  - `reload_eval.py`: Agora usa `NESTED_CV_CANDIDATES` no nested CV. Stacking/Voting/MLP só entram no treino final via `ALL_CANDIDATES`.
+- **`SentenceBertVectorizer.fit_transform` inexistente** — Script chamava `fit_transform()` que não existe na classe; corrigido para `fit()` + `transform()` separados.
+- **Timestamps adicionados** — Cada etapa do `reload_eval.py` agora exibe `[HH:MM:SS]` para facilitar diagnóstico.
+
+### Alterado
+- `scripts/reload_eval.py` — Adicionados timestamps, correção SBERT fit/transform
+- `src/models/classifier.py` — `NESTED_CV_CANDIDATES`, `N_JOBS=2`, `_make_candidate` aceita `n_jobs` opcional
+- `src/models/salary_model.py` — `NESTED_CV_CANDIDATES`, `N_JOBS=2`
+- `todo.md` — Diagnóstico de performance documentado, Fase 5 marcada como concluída
+
+### Resultados (pós-correção)
+- **`reload_eval.py` executou em ~10 min sem travamentos** (vs >30 min ou travamento antes)
+- **Classificação**: ExtraTrees venceu nested CV — F1=68.11% (±0.55pp)
+- **Regressão**: GradientBoosting venceu nested CV — RMSE=$39.651 (±$2.047)
+- **85/85 testes unitários passando** (12 slow/SBERT desabilitados sem dependência NLP)
+
 ## [0.7.0] — 2026-06-25
 
 ### Adicionado

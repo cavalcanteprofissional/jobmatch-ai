@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jobmatch-ai"
-version = "0.7.0"
+version = "0.8.0"
 description = "Sistema de ML para matching inteligente entre currículos e vagas de emprego"
 authors = ["Residência Prática TIC 44 - UFC"]
 license = "MIT"

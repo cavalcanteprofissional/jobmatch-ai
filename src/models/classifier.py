@@ -152,6 +152,7 @@ if _HAS_CATBOOST:
 
 
 DENSE_ONLY_MODELS = {"mlp", "gaussian_nb"}
+N_JOBS = 2  # Evita thrashing em nested CV
 
 
 def _is_sparse_compatible(name: str, X) -> bool:
@@ -160,9 +161,13 @@ def _is_sparse_compatible(name: str, X) -> bool:
     return name not in DENSE_ONLY_MODELS
 
 
-def _make_candidate(name: str) -> object:
+def _make_candidate(name: str, n_jobs: int | None = None, **overrides) -> object:
     cls, kwargs = INDIVIDUAL_CANDIDATES[name]
-    return cls(**kwargs)
+    params = dict(kwargs)
+    if n_jobs is not None and "n_jobs" in params:
+        params["n_jobs"] = n_jobs
+    params.update(overrides)
+    return cls(**params)
 
 
 def _make_stacking() -> StackingClassifier:
@@ -205,6 +210,11 @@ ENSEMBLE_CANDIDATES: dict[str, object] = {
 }
 
 ALL_CANDIDATES = list(INDIVIDUAL_CANDIDATES.keys()) + list(ENSEMBLE_CANDIDATES.keys())
+
+NESTED_CV_CANDIDATES = [
+    k for k in INDIVIDUAL_CANDIDATES
+    if k not in DENSE_ONLY_MODELS
+]
 
 
 def _get_model(name: str) -> object:
@@ -272,6 +282,8 @@ def train_nested_cv_clf(
     logger.info("Nested CV — Classificação (%d outer x %d inner)", outer_cv, inner_cv)
     logger.info("=" * 50)
 
+    candidates = NESTED_CV_CANDIDATES if issparse(X) else list(INDIVIDUAL_CANDIDATES.keys())
+
     for fold, (train_idx, test_idx) in enumerate(outer_kfold.split(X, y)):
         X_train_fold = X[train_idx]
         X_test_fold = X[test_idx]
@@ -284,7 +296,7 @@ def train_nested_cv_clf(
         fold_best_name = ""
         fold_best_params = {}
 
-        for name in ALL_CANDIDATES:
+        for name in candidates:
             if not _is_sparse_compatible(name, X_train_fold):
                 logger.debug("  %-25s incompatível com matriz sparse, pulando", name)
                 continue
@@ -297,7 +309,7 @@ def train_nested_cv_clf(
                     actual_n_iter = min(n_iter, grid_size)
                     use_grid = grid_size <= actual_n_iter
                     Searcher = GridSearchCV if use_grid else RandomizedSearchCV
-                    common = dict(cv=inner_cv, scoring="f1", n_jobs=-1, verbose=0)
+                    common = dict(cv=inner_cv, scoring="f1", n_jobs=N_JOBS, verbose=0)
                     if not use_grid:
                         common["random_state"] = random_state
                     if use_grid:
@@ -312,7 +324,8 @@ def train_nested_cv_clf(
                     candidate_params = search.best_params_
                 else:
                     scores = cross_val_score(
-                        base, X_train_fold, y_train_fold, cv=inner_cv, scoring="f1"
+                        base, X_train_fold, y_train_fold, cv=inner_cv, scoring="f1",
+                        n_jobs=N_JOBS,
                     )
                     inner_score = scores.mean()
                     candidate_model = base

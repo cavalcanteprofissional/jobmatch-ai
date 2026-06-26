@@ -5,10 +5,11 @@ Sistema de Machine Learning para matching inteligente entre currículos e vagas 
 ## Funcionalidades
 
 - **Score de Aderência**: Similaridade cosseno entre currículo e vagas via TF-IDF
-- **Classificação Fit/No Fit**: Classificador binário (XGBoost / LightGBM / ExtraTrees / RF / SVM / LR) com seleção automática via nested CV + tuning
-- **Top-5 Vagas**: Ranking das vagas mais compatíveis com o perfil
+- **Classificação Fit/No Fit**: Classificador binário (ExtraTrees / XGBoost / LightGBM / RF / SVM / LR / SGD / KNN / DT) com seleção automática via nested CV + tuning
+- **Top-5 Vagas**: Ranking das vagas mais compatíveis com o perfil (com suporte a re-ranking via cross-encoder)
 - **Skills Gap Analysis**: Identifica skills faltantes (922 títulos mapeados, 20.6k skills) e sugere plano de desenvolvimento com sinônimos
-- **Estimativa Salarial**: Regressão (VotingEnsemble: GB + RF + XGB + ET + LGBM) para prever faixa salarial por cargo
+- **Estimativa Salarial**: Regressão (GradientBoosting / XGBoost / LightGBM / RF / ET / SGD / DT / KNN) para prever faixa salarial por cargo
+- **Embeddings Semânticos (SBERT)**: Opcional — Sentence-BERT `all-MiniLM-L6-v2` para classificação com MLP/GaussianNB
 - **API REST**: Endpoints FastAPI para predição, health check, info dos modelos e métricas
 - **Frontend Híbrido**: Streamlit que consome a API REST com fallback direto para os modelos
 - **Dashboard de Monitoramento**: Métricas em tempo real (latência, erros, requisições) + gráficos Altair do modelo ML (heatmap, histograma de scores, scatter salários)
@@ -32,7 +33,7 @@ jobmatch/
 │   ├── monitoring/       # MetricsCollector singleton
 │   └── utils/            # Logger (RotatingFileHandler) + Config (dotenv)
 ├── notebooks/            # Jupyter notebooks de EDA e experimentos
-├── tests/                # 78 testes (pytest + pytest-cov)
+├── tests/                # ~95 testes (pytest + pytest-cov, fail_under=60%)
 ├── logs/                 # Logs rotativos (não versionado)
 ├── .env.example          # Template de variáveis de ambiente
 ├── .env.local            # Config local com credenciais (não versionado)
@@ -82,7 +83,7 @@ streamlit run src/app/streamlit_app.py
 # 9. Dashboard de monitoramento (requer API rodando ou modelos pré-treinados)
 streamlit run src/app/monitor_dashboard.py --server.port 8501
 
-# 10. Re-treino rápido + dados de avaliação (opcional, ~30s)
+# 10. Re-treino rápido + dados de avaliação com nested CV (opcional, ~10 min)
 python scripts/reload_eval.py
 
 # 11. Docker (deploy completo)
@@ -107,35 +108,35 @@ curl -X POST http://localhost:8000/predict \
 ## Testes
 
 ```bash
-poetry run pytest tests/ -v --cov=src
-# 78 passed · 67% coverage
+poetry run pytest tests/ -v --cov=src --ignore=tests/test_load_data.py
+# 85 passed (rápidos) · 12 deselected (slow / SBERT)
 ```
 
 | Arquivo | Testes |
 |---------|--------|
 | `test_preprocess.py` | 7 |
-| `test_load_data.py` | 4 |
+| `test_load_data.py` | 4 (requer datasets HuggingFace) |
 | `test_compose_datasets.py` | 8 |
-| `test_vectorizer.py` | 6 |
-| `test_classifier.py` | 5 |
-| `test_recommender.py` | 4 |
-| `test_salary_model.py` | 4 |
+| `test_vectorizer.py` | 6 unit + 1 slow |
+| `test_classifier.py` | 13 (inclui MLP, GaussianNB, nested CV) |
+| `test_recommender.py` | 4 unit + 1 slow + cross-encoder |
+| `test_salary_model.py` | 7 (inclui MLPRegressor, nested CV) |
 | `test_skills_analyzer.py` | 7 |
-| `test_predictor.py` | 6 |
+| `test_predictor.py` | 11 (inclui employability, SBERT flag) |
 | `test_monitoring.py` | 6 |
 | `test_pipeline_integration.py` | 1 (smoke: 11 etapas) |
 | `test_integration_real_data.py` | 1 (slow: dados reais) |
 
-## Métricas Alvo
+## Métricas
 
-| Tarefa | Métrica | Atual | Melhor Modelo |
+| Tarefa | Métrica | Valor | Melhor Modelo |
 |--------|---------|-------|---------------|
 | Classificação | F1-Score | **72.33%** | XGBoost |
 | Classificação | Acurácia | **71.82%** | XGBoost |
-| Classificação (Nested CV) | F1 médio | **70.92%** (±2.39pp) | XGBoost |
+| Classificação (Nested CV 2×2) | F1 médio | **68.11%** (±0.55pp) | ExtraTrees |
 | Regressão Salarial | RMSE | **$33.452** | VotingRegressor |
 | Regressão Salarial | R² | **40.09%** | VotingRegressor |
-| Regressão (Nested CV) | RMSE médio | **$39.662** (±$2.295) | VotingRegressor |
+| Regressão (Nested CV 3×2) | RMSE médio | **$39.651** (±$2.047) | GradientBoosting |
 
 ## Stack
 
@@ -151,8 +152,9 @@ poetry run pytest tests/ -v --cov=src
 - rapidfuzz (fuzzy match)
 - NLTK (lemmatização e stopwords)
 - joblib (serialização)
+- Sentence-Transformers (SBERT + cross-encoder, opcional — grupo `nlp`)
 - Poetry (dependências)
-- pytest + pytest-cov (testes, fail_under=55%)
+- pytest + pytest-cov (testes, fail_under=60%)
 - python-dotenv (config segura)
 
 ## Licença
