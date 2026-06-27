@@ -258,17 +258,16 @@
 | Arquivo | Função |
 |---------|--------|
 | `Dockerfile` (raiz) | Build da API Python (multistage, Poetry, python:3.11-slim) |
-| `render.yaml` (raiz) | Blueprint Render: define Web Service + Static Site + Disk |
+| `render.yaml` (raiz) | Blueprint Render: define Web Service (API) + Disk. Frontend criado manualmente |
 | `scripts/startup.sh` | Script de inicialização: treina modelos se `data/` estiver vazio |
 | `frontend/src/services/api.ts` | Usa `VITE_API_URL` (variável de ambiente Render) para URL absoluta |
-
-### Checklist
 
 ### Bugs corrigidos nesta fase
 
 | # | Bug | Arquivo | Fix | Data |
 |---|-----|---------|-----|------|
 | B1 | `TypeError: 'NoneType' object is not iterable` ao iniciar API | `src/api/server.py:192` | `app.openapi_tags` é `None` por padrão, não lista vazia. Substituído loop de dedup por `app.openapi_tags = TAGS_META` | 26/06 |
+| B2 | `type: static` não suportado no Render Blueprint | `render.yaml` | Removido do `render.yaml`. Frontend Static Site criado manualmente via Dashboard | 26/06 |
 
 ### Checklist
 
@@ -279,13 +278,14 @@
 | 3 | Ajustar `Dockerfile` CMD para usar `startup.sh` | ✅ |
 | 4 | Ajustar `frontend/src/services/api.ts` para suportar `VITE_API_URL` | ✅ |
 | 5 | Corrigir `app.openapi_tags` (None → lista) em `server.py` | ✅ |
-| 6 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
-| 7 | Deploy API no Render como Web Service | ⬜ (manual) |
-| 8 | Deploy Frontend no Render como Static Site | ⬜ (manual) |
-| 9 | Configurar Disk persistente em `/app/data` para API | ⬜ (manual) |
-| 10 | Rodar `reload_eval.py` via Render Shell para gerar modelos | ⬜ (manual) |
-| 11 | Testar endpoints públicos | ⬜ (manual) |
-| 12 | Atualizar `CHANGELOG.md` e commitar | ⬜ |
+| 6 | Corrigir `render.yaml` — remover `type: static` | ✅ |
+| 7 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
+| 8 | Deploy API (Blueprint) no Render | ⬜ (manual) |
+| 9 | Deploy Frontend (Static Site manual) no Render | ⬜ (manual) |
+| 10 | Configurar Disk persistente em `/app/data` para API | ⬜ (manual) |
+| 11 | Rodar `reload_eval.py` via Render Shell para gerar modelos | ⬜ (manual) |
+| 12 | Testar endpoints públicos | ⬜ (manual) |
+| 13 | Atualizar `CHANGELOG.md` e commitar | ⬜ |
 
 ### Fluxo de acesso final
 

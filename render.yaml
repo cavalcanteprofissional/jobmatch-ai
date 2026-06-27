@@ -1,5 +1,7 @@
 # Render Blueprint — JobMatch AI
 # Deploy: https://render.com  (Free Tier)
+# Nota: Frontend Static Site é criado manualmente via Dashboard
+#       (Render Blueprint não suporta type: static)
 
 services:
   # ── API FastAPI ──────────────────────────────────────────────
@@ -17,16 +19,3 @@ services:
       name: jobmatch-data
       mountPath: /app/data
       sizeGB: 1
-
-  # ── Frontend React (Static Site) ────────────────────────────
-  - type: static
-    name: jobmatch-frontend
-    buildCommand: cd frontend && npm ci && npm run build
-    staticPublishPath: ./frontend/dist
-    pullRequestPreviewsEnabled: false
-    envVars:
-      - key: VITE_API_URL
-        fromService:
-          type: web
-          name: jobmatch-api
-          property: url  # e.g. https://jobmatch-api.onrender.com
