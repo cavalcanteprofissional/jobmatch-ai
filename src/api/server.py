@@ -189,11 +189,6 @@ TAGS_META = [
     {"name": TAG_SERVER, "description": "Health check e métricas de uso do servidor"},
 ]
 
-for tag in TAGS_META:
-    app.openapi_tags = [t for t in getattr(app, "openapi_tags", []) if t.get("name") != tag["name"]]
-    if tag not in getattr(app, "openapi_tags", []):
-        app.openapi_tags = [*(app.openapi_tags or []), tag]
-
 app.openapi_tags = TAGS_META
 
 

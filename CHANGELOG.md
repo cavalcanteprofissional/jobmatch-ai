@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.9.1] — 2026-06-26
+
+### Corrigido
+- **`TypeError: 'NoneType' object is not iterable` na inicialização da API** — `app.openapi_tags` é `None` por padrão no FastAPI. O loop de deduplicação em `server.py:192` tentava iterar sobre `None` ao usar `getattr(app, "openapi_tags", [])` (o atributo existe, mas é `None`). Substituído por `app.openapi_tags = TAGS_META` direto.
+
 ## [0.9.0] — 2026-06-26
 
 ### Adicionado

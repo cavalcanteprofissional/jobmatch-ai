@@ -264,19 +264,28 @@
 
 ### Checklist
 
+### Bugs corrigidos nesta fase
+
+| # | Bug | Arquivo | Fix | Data |
+|---|-----|---------|-----|------|
+| B1 | `TypeError: 'NoneType' object is not iterable` ao iniciar API | `src/api/server.py:192` | `app.openapi_tags` é `None` por padrão, não lista vazia. Substituído loop de dedup por `app.openapi_tags = TAGS_META` | 26/06 |
+
+### Checklist
+
 | # | Tarefa | Status |
 |---|--------|--------|
-| 1 | Criar `render.yaml` (Blueprint) | ⬜ |
-| 2 | Criar `scripts/startup.sh` (treino automático no primeiro deploy) | ⬜ |
-| 3 | Ajustar `Dockerfile` CMD para usar `startup.sh` | ⬜ |
-| 4 | Ajustar `frontend/src/services/api.ts` para suportar `VITE_API_URL` | ⬜ |
-| 5 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
-| 6 | Deploy API no Render como Web Service | ⬜ (manual) |
-| 7 | Deploy Frontend no Render como Static Site | ⬜ (manual) |
-| 8 | Configurar Disk persistente em `/app/data` para API | ⬜ (manual) |
-| 9 | Rodar `reload_eval.py` via Render Shell para gerar modelos | ⬜ (manual) |
-| 10 | Testar endpoints públicos | ⬜ (manual) |
-| 11 | Atualizar `CHANGELOG.md` e commitar | ⬜ |
+| 1 | Criar `render.yaml` (Blueprint) | ✅ |
+| 2 | Criar `scripts/startup.sh` (treino automático no primeiro deploy) | ✅ |
+| 3 | Ajustar `Dockerfile` CMD para usar `startup.sh` | ✅ |
+| 4 | Ajustar `frontend/src/services/api.ts` para suportar `VITE_API_URL` | ✅ |
+| 5 | Corrigir `app.openapi_tags` (None → lista) em `server.py` | ✅ |
+| 6 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
+| 7 | Deploy API no Render como Web Service | ⬜ (manual) |
+| 8 | Deploy Frontend no Render como Static Site | ⬜ (manual) |
+| 9 | Configurar Disk persistente em `/app/data` para API | ⬜ (manual) |
+| 10 | Rodar `reload_eval.py` via Render Shell para gerar modelos | ⬜ (manual) |
+| 11 | Testar endpoints públicos | ⬜ (manual) |
+| 12 | Atualizar `CHANGELOG.md` e commitar | ⬜ |
 
 ### Fluxo de acesso final
 
