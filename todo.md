@@ -277,6 +277,7 @@
 | B4 | `Out of Memory (512 Mi)` no free tier ao executar pipeline de treino | `scripts/startup.sh`, `.dockerignore` | **Mudança de estratégia:** modelos embutidos na imagem Docker. `startup.sh` simplificado (só uvicorn). `.dockerignore` agora inclui `data/models/` e `data/processed/` | 27/06 |
 | B5 | `Exited with status 1` no Render após inicio — NLTK data não baixada na imagem | `Dockerfile`, `scripts/startup.sh` | Adicionado `nltk.download` no builder stage. Adicionado import test no `startup.sh`. Removido `HEALTHCHECK` do Dockerfile (conflito com health check do Render) | 27/06 |
 | B6 | `libgomp.so.1: cannot open shared object file` — lightgbm/xgboost crasham no import mesmo com try/except ImportError | `Dockerfile`, `classifier.py`, `salary_model.py` | `try/except ImportError` não captura `OSError` (ctypes `_dlopen`). Solução: `libgomp1` no apt-get + trocar `except ImportError` por `except (ImportError, OSError)` nos blocos de lightgbm e xgboost | 27/06 |
+| B7 | CORS — frontend local não consegue bater na API do Render | `server.py` | Adicionado `CORSMiddleware` com origens `localhost:5173`, `localhost:3000`, `https://jobmatch-frontend.onrender.com` | 27/06 |
 
 ### Checklist
 
@@ -302,6 +303,7 @@
 | 18 | Atualizar `README.md` | ✅ |
 | 19 | Adicionar `libgomp1` no apt-get do Dockerfile e capturar OSError no try/except de lightgbm/xgboost | ✅ |
 | 20 | Criar `.env.local` e `.env.example` no frontend para testar local com API cloud | ✅ |
+| 21 | Adicionar `CORSMiddleware` na API (permitir frontend local + Render) | ✅ |
 
 ### Fluxo de acesso final
 

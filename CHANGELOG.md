@@ -6,9 +6,12 @@
 - **`frontend/.env.local`** — `VITE_API_URL=https://jobmatch-api-hpan.onrender.com` para testar frontend local com API cloud
 - **`frontend/.env.example`** — Template documentado com placeholder para novos devs
 
+### Corrigido
+- **CORS — frontend local não conseguia bater na API do Render** — API não tinha `CORSMiddleware`. Navegador bloqueava fetch de `localhost:5173` para `jobmatch-api-hpan.onrender.com`. Adicionado `CORSMiddleware` em `server.py` com origens: `localhost:5173`, `localhost:3000`, `https://jobmatch-frontend.onrender.com`.
+
 ### Alterado
 - **`README.md`** — Adicionada seção "Running Locally with Cloud API"
-- **`todo.md`** — Checklist item 20 registrado
+- **`todo.md`** — Checklist item 20 + 21, B7 registrado
 
 ## [0.9.1] — 2026-06-27
 
