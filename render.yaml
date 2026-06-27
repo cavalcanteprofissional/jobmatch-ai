@@ -1,0 +1,32 @@
+# Render Blueprint — JobMatch AI
+# Deploy: https://render.com  (Free Tier)
+
+services:
+  # ── API FastAPI ──────────────────────────────────────────────
+  - type: web
+    name: jobmatch-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+    disk:
+      name: jobmatch-data
+      mountPath: /app/data
+      sizeGB: 1
+
+  # ── Frontend React (Static Site) ────────────────────────────
+  - type: static
+    name: jobmatch-frontend
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: ./frontend/dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: jobmatch-api
+          property: url  # e.g. https://jobmatch-api.onrender.com

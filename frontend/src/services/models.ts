@@ -117,4 +117,22 @@ export interface ModelMetrics {
   }
 }
 
+export interface EvalRow {
+  y_true: number
+  y_pred: number
+  y_prob?: number
+  y_true_label?: string
+  y_pred_label?: string
+}
+
+export interface EvalClassificationResponse {
+  data: EvalRow[]
+  total: number
+}
+
+export interface EvalRegressionResponse {
+  data: EvalRow[]
+  total: number
+}
+
 

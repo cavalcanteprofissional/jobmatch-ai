@@ -15,10 +15,7 @@ export default function Monitor() {
   const [tab, setTab] = useState<'ml' | 'api'>('ml')
 
   useEffect(() => {
-    fetch('/data/models/metrics.json')
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setModelMetrics)
-      .catch(() => setModelMetrics(null))
+    api.modelMetrics().then(setModelMetrics).catch(() => setModelMetrics(null))
     api.metrics().then(setApiMetrics).catch(() => setApiMetrics(null))
   }, [])
 
@@ -123,7 +120,7 @@ export default function Monitor() {
         </div>
       ) : tab === 'ml' && !modelMetrics ? (
         <div className="p-6 bg-yellow-50 border rounded-lg text-yellow-800">
-          metrics.json não encontrado. Execute o treino dos modelos primeiro.
+          Métricas dos modelos não disponíveis. Execute o treino dos modelos (reload_eval.py) e reinicie a API.
         </div>
       ) : null}
 

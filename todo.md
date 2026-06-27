@@ -233,9 +233,55 @@
 | Fuzzy match | rapidfuzz | Mais rápido que fuzzywuzzy |
 | Frontend (atual) | React + Vite + Tailwind | Substituiu Streamlit por componentização e perfomance |
 | Frontend (legado) | Streamlit + FastAPI | Híbrido: REST com fallback direto (removido) |
+| Deploy Cloud | Render.com (Web Service API + Static Site Frontend) | Free tier, Docker API, Static Site React, disk persistente |
 | Python | >=3.11,<3.13 | Compatibilidade com dependências |
 | Gerenciamento | Poetry | Reprodutibilidade de ambiente |
 | Testes | pytest + pytest-cov | 78 testes → ~95, fail_under=55% → 60% |
 | Mock em testes | `unittest.mock.patch` | Apenas para dependências opcionais (sentence-transformers, catboost) |
 | Dados de teste | Reais (skills_map) + dense numpy 50×10 | MLP/GaussianNB testados sem mock, lógica pura com dados reais |
 | NLP | spaCy (Fase 3) + NLTK (atual) | POS-aware lemmatization + NER |
+
+---
+
+## Fase 7 — Deploy Cloud: Render.com (EM ANDAMENTO — branch `feat/frontend-react`)
+
+### Estratégia
+
+| Serviço | Plataforma | Tipo | Custo |
+|---------|-----------|------|-------|
+| API FastAPI | Render | Web Service (Docker) | Free |
+| Frontend React | Render | Static Site | Free |
+| Dados persistentes | Render | Disk (1 GB) mount `/app/data` | Free |
+
+### Arquivos de Deploy
+
+| Arquivo | Função |
+|---------|--------|
+| `Dockerfile` (raiz) | Build da API Python (multistage, Poetry, python:3.11-slim) |
+| `render.yaml` (raiz) | Blueprint Render: define Web Service + Static Site + Disk |
+| `scripts/startup.sh` | Script de inicialização: treina modelos se `data/` estiver vazio |
+| `frontend/src/services/api.ts` | Usa `VITE_API_URL` (variável de ambiente Render) para URL absoluta |
+
+### Checklist
+
+| # | Tarefa | Status |
+|---|--------|--------|
+| 1 | Criar `render.yaml` (Blueprint) | ⬜ |
+| 2 | Criar `scripts/startup.sh` (treino automático no primeiro deploy) | ⬜ |
+| 3 | Ajustar `Dockerfile` CMD para usar `startup.sh` | ⬜ |
+| 4 | Ajustar `frontend/src/services/api.ts` para suportar `VITE_API_URL` | ⬜ |
+| 5 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
+| 6 | Deploy API no Render como Web Service | ⬜ (manual) |
+| 7 | Deploy Frontend no Render como Static Site | ⬜ (manual) |
+| 8 | Configurar Disk persistente em `/app/data` para API | ⬜ (manual) |
+| 9 | Rodar `reload_eval.py` via Render Shell para gerar modelos | ⬜ (manual) |
+| 10 | Testar endpoints públicos | ⬜ (manual) |
+| 11 | Atualizar `CHANGELOG.md` e commitar | ⬜ |
+
+### Fluxo de acesso final
+
+```
+Navegador → https://jobmatch.onrender.com (Static Site React)
+                              ↓
+                    fetch("/api/predict") → https://jobmatch-api.onrender.com/predict (Web Service)
+```

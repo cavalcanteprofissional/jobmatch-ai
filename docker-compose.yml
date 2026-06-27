@@ -22,7 +22,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: deploy/Dockerfile.frontend
     container_name: jobmatch-frontend
     ports:
       - "80:80"
