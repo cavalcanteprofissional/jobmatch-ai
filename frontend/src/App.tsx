@@ -1,7 +1,9 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import JobMatch from './pages/JobMatch'
-import Monitor from './pages/Monitor'
 import { useTheme } from './context/ThemeContext'
+
+const JobMatch = lazy(() => import('./pages/JobMatch'))
+const Monitor = lazy(() => import('./pages/Monitor'))
 
 function App() {
   const { theme, toggle } = useTheme()
@@ -25,11 +27,17 @@ function App() {
         </div>
       </nav>
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <Routes>
-          <Route path="/" element={<JobMatch />} />
-          <Route path="/monitor" element={<Monitor />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400" />
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<JobMatch />} />
+            <Route path="/monitor" element={<Monitor />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   )

@@ -28,7 +28,12 @@
 - `index.css` — CSS variables para charts
 - `Monitor.tsx` — Grid de 6 → 8+ metrics, gráficos de avaliação integrados
 - `JobMatch.tsx` — Grid de 4 → 5 MetricCards com novos campos
+- `App.tsx` — Pages `JobMatch` e `Monitor` carregam via `React.lazy()` + `Suspense` para code-splitting
+- `vite.config.ts` — `manualChunks` separa vendor (React) e charts (Recharts) em chunks independentes
 - `todo.md` — Fase 8 e 9 registradas e concluídas
+
+### Observado
+- **npm audit: 2 vulnerabilities (1 moderate, 1 high)** — Apenas em ferramentas de build (vite 5.x, esbuild). Static Site no Render não expõe dev server. Correção exigiria bump major (vite 8.x) que quebra compatibilidade com plugins. Zero impacto em produção.
 
 ## [0.9.2] — 2026-06-27
 
