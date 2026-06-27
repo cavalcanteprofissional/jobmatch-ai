@@ -24,7 +24,12 @@ from sklearn.model_selection import (
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import LinearSVC
-from xgboost import XGBClassifier
+
+try:
+    from xgboost import XGBClassifier
+    _HAS_XGB = True
+except ImportError:
+    _HAS_XGB = False
 
 try:
     from lightgbm import LGBMClassifier
@@ -68,11 +73,6 @@ INDIVIDUAL_CANDIDATES: dict[str, tuple[type, dict]] = {
         LinearSVC,
         {"class_weight": "balanced", "max_iter": 2000, "random_state": 42},
     ),
-    "xgboost": (
-        XGBClassifier,
-        {"eval_metric": "logloss", "random_state": 42, "verbosity": 0,
-         "tree_method": "hist", "n_jobs": -1},
-    ),
     "extra_trees": (
         ExtraTreesClassifier,
         {"class_weight": "balanced", "n_jobs": -1, "random_state": 42},
@@ -87,6 +87,13 @@ INDIVIDUAL_CANDIDATES: dict[str, tuple[type, dict]] = {
         {},
     ),
 }
+
+if _HAS_XGB:
+    INDIVIDUAL_CANDIDATES["xgboost"] = (
+        XGBClassifier,
+        {"eval_metric": "logloss", "random_state": 42, "verbosity": 0,
+         "tree_method": "hist", "n_jobs": -1},
+    )
 
 if _HAS_LGBM:
     INDIVIDUAL_CANDIDATES["lightgbm"] = (
@@ -115,11 +122,6 @@ HYPERPARAM_GRIDS: dict[str, dict] = {
         "C": [0.1, 0.5, 1.0, 5.0],
         "loss": ["squared_hinge"],
     },
-    "xgboost": {
-        "n_estimators": [100, 200],
-        "max_depth": [3, 5],
-        "learning_rate": [0.05],
-    },
     "extra_trees": {
         "n_estimators": [100, 200],
         "max_depth": [5, 10, None],
@@ -134,6 +136,13 @@ HYPERPARAM_GRIDS: dict[str, dict] = {
         "var_smoothing": [1e-9, 1e-8, 1e-7],
     },
 }
+
+if _HAS_XGB:
+    HYPERPARAM_GRIDS["xgboost"] = {
+        "n_estimators": [100, 200],
+        "max_depth": [3, 5],
+        "learning_rate": [0.05],
+    }
 
 if _HAS_LGBM:
     HYPERPARAM_GRIDS["lightgbm"] = {
@@ -175,9 +184,10 @@ def _make_stacking() -> StackingClassifier:
         ("lr", _make_candidate("logistic_regression")),
         ("rf", _make_candidate("random_forest")),
         ("svm", _make_candidate("svm")),
-        ("xgb", _make_candidate("xgboost")),
         ("et", _make_candidate("extra_trees")),
     ]
+    if _HAS_XGB:
+        estimators.append(("xgb", _make_candidate("xgboost")))
     if _HAS_LGBM:
         estimators.append(("lgbm", _make_candidate("lightgbm")))
     if _HAS_CATBOOST:
@@ -194,9 +204,10 @@ def _make_voting() -> VotingClassifier:
     estimators = [
         ("lr", _make_candidate("logistic_regression")),
         ("rf", _make_candidate("random_forest")),
-        ("xgb", _make_candidate("xgboost")),
         ("et", _make_candidate("extra_trees")),
     ]
+    if _HAS_XGB:
+        estimators.append(("xgb", _make_candidate("xgboost")))
     if _HAS_LGBM:
         estimators.append(("lgbm", _make_candidate("lightgbm")))
     if _HAS_CATBOOST:

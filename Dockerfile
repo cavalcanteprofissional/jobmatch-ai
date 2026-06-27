@@ -13,6 +13,7 @@ RUN poetry config virtualenvs.create false \
 
 COPY . .
 RUN poetry install --no-interaction --no-ansi --only main
+RUN pip install xgboost lightgbm
 RUN python -m nltk.downloader punkt stopwords wordnet -q
 
 FROM python:3.11-slim AS runtime

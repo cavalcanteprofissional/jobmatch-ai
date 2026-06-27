@@ -18,7 +18,12 @@ from sklearn.model_selection import GridSearchCV, KFold, RandomizedSearchCV, cro
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.tree import DecisionTreeRegressor
-from xgboost import XGBRegressor
+
+try:
+    from xgboost import XGBRegressor
+    _HAS_XGB = True
+except ImportError:
+    _HAS_XGB = False
 
 try:
     from lightgbm import LGBMRegressor
@@ -57,10 +62,6 @@ INDIVIDUAL_CANDIDATES: dict[str, tuple[type, dict]] = {
         RandomForestRegressor,
         {"n_jobs": -1, "random_state": 42},
     ),
-    "xgboost": (
-        XGBRegressor,
-        {"random_state": 42, "verbosity": 0, "tree_method": "hist", "n_jobs": -1},
-    ),
     "extra_trees": (
         ExtraTreesRegressor,
         {"n_jobs": -1, "random_state": 42},
@@ -83,6 +84,12 @@ INDIVIDUAL_CANDIDATES: dict[str, tuple[type, dict]] = {
          "n_iter_no_change": 10},
     ),
 }
+
+if _HAS_XGB:
+    INDIVIDUAL_CANDIDATES["xgboost"] = (
+        XGBRegressor,
+        {"random_state": 42, "verbosity": 0, "tree_method": "hist", "n_jobs": -1},
+    )
 
 if _HAS_LGBM:
     INDIVIDUAL_CANDIDATES["lightgbm"] = (
@@ -107,11 +114,6 @@ HYPERPARAM_GRIDS: dict[str, dict] = {
         "max_depth": [5, 10, None],
         "min_samples_split": [2, 5, 10],
     },
-    "xgboost": {
-        "n_estimators": [100, 200],
-        "max_depth": [3, 5],
-        "learning_rate": [0.05],
-    },
     "extra_trees": {
         "n_estimators": [100, 200],
         "max_depth": [5, 10, None],
@@ -135,6 +137,13 @@ HYPERPARAM_GRIDS: dict[str, dict] = {
         "learning_rate_init": [0.001, 0.01],
     },
 }
+
+if _HAS_XGB:
+    HYPERPARAM_GRIDS["xgboost"] = {
+        "n_estimators": [100, 200],
+        "max_depth": [3, 5],
+        "learning_rate": [0.05],
+    }
 
 if _HAS_LGBM:
     HYPERPARAM_GRIDS["lightgbm"] = {
@@ -161,9 +170,10 @@ def _make_stacking() -> StackingRegressor:
     estimators = [
         ("gb", _make_candidate("gradient_boosting")),
         ("rf", _make_candidate("random_forest")),
-        ("xgb", _make_candidate("xgboost")),
         ("et", _make_candidate("extra_trees")),
     ]
+    if _HAS_XGB:
+        estimators.append(("xgb", _make_candidate("xgboost")))
     if _HAS_LGBM:
         estimators.append(("lgbm", _make_candidate("lightgbm")))
     if _HAS_CATBOOST:
@@ -180,9 +190,10 @@ def _make_voting() -> VotingRegressor:
     estimators = [
         ("gb", _make_candidate("gradient_boosting")),
         ("rf", _make_candidate("random_forest")),
-        ("xgb", _make_candidate("xgboost")),
         ("et", _make_candidate("extra_trees")),
     ]
+    if _HAS_XGB:
+        estimators.append(("xgb", _make_candidate("xgboost")))
     if _HAS_LGBM:
         estimators.append(("lgbm", _make_candidate("lightgbm")))
     if _HAS_CATBOOST:
