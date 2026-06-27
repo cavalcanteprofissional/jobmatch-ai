@@ -268,6 +268,7 @@
 |---|-----|---------|-----|------|
 | B1 | `TypeError: 'NoneType' object is not iterable` ao iniciar API | `src/api/server.py:192` | `app.openapi_tags` é `None` por padrão, não lista vazia. Substituído loop de dedup por `app.openapi_tags = TAGS_META` | 26/06 |
 | B2 | `type: static` não suportado no Render Blueprint | `render.yaml` | Removido do `render.yaml`. Frontend Static Site criado manualmente via Dashboard | 26/06 |
+| B3 | Env vars `PYTHONUNBUFFERED`/`PYTHONDONTWRITEBYTECODE` desnecessárias no Dashboard | `Dockerfile`, `render.yaml` | Movidas para `ENV` no Dockerfile. `render.yaml` e `docker-compose.yml` limpos | 26/06 |
 
 ### Checklist
 
@@ -279,13 +280,14 @@
 | 4 | Ajustar `frontend/src/services/api.ts` para suportar `VITE_API_URL` | ✅ |
 | 5 | Corrigir `app.openapi_tags` (None → lista) em `server.py` | ✅ |
 | 6 | Corrigir `render.yaml` — remover `type: static` | ✅ |
-| 7 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
-| 8 | Deploy API (Blueprint) no Render | ⬜ (manual) |
-| 9 | Deploy Frontend (Static Site manual) no Render | ⬜ (manual) |
-| 10 | Configurar Disk persistente em `/app/data` para API | ⬜ (manual) |
-| 11 | Rodar `reload_eval.py` via Render Shell para gerar modelos | ⬜ (manual) |
-| 12 | Testar endpoints públicos | ⬜ (manual) |
-| 13 | Atualizar `CHANGELOG.md` e commitar | ⬜ |
+| 7 | Mover env vars Python para `ENV` no Dockerfile (0 env vars no Render) | ✅ |
+| 8 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
+| 9 | Deploy API (Web Service manual) no Render | ⬜ (manual) |
+| 10 | Deploy Frontend (Static Site manual) no Render | ⬜ (manual) |
+| 11 | Configurar Disk persistente em `/app/data` para API | ⬜ (manual) |
+| 12 | Rodar `reload_eval.py` via Render Shell para gerar modelos | ⬜ (manual) |
+| 13 | Testar endpoints públicos | ⬜ (manual) |
+| 14 | Atualizar `CHANGELOG.md` e commitar | ⬜ |
 
 ### Fluxo de acesso final
 

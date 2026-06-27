@@ -10,11 +10,7 @@ services:
     env: docker
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    envVars:
-      - key: PYTHONUNBUFFERED
-        value: "1"
-      - key: PYTHONDONTWRITEBYTECODE
-        value: "1"
+    # PYTHONUNBUFFERED e PYTHONDONTWRITEBYTECODE definidos no Dockerfile
     disk:
       name: jobmatch-data
       mountPath: /app/data

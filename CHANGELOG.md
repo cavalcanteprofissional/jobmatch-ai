@@ -5,6 +5,7 @@
 ### Corrigido
 - **`TypeError: 'NoneType' object is not iterable` na inicialização da API** — `app.openapi_tags` é `None` por padrão no FastAPI. O loop de deduplicação em `server.py:192` tentava iterar sobre `None` ao usar `getattr(app, "openapi_tags", [])` (o atributo existe, mas é `None`). Substituído por `app.openapi_tags = TAGS_META` direto.
 - **`render.yaml` com `type: static` inválido** — Render Blueprint não suporta `type: static`. Seção do frontend removida do `render.yaml`. Frontend será criado como Static Site manualmente no Dashboard.
+- **Env vars movidas para o Dockerfile** — `PYTHONUNBUFFERED` e `PYTHONDONTWRITEBYTECODE` agora são `ENV` no `Dockerfile`, eliminando necessidade de configurá-las no Render Dashboard ou no `docker-compose.yml`.
 
 ## [0.9.0] — 2026-06-26
 

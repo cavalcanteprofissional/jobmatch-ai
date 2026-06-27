@@ -16,6 +16,9 @@ RUN poetry install --no-interaction --no-ansi --only main
 
 FROM python:3.11-slim AS runtime
 
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
