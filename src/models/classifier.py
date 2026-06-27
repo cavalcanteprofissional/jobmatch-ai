@@ -28,19 +28,19 @@ from sklearn.svm import LinearSVC
 try:
     from xgboost import XGBClassifier
     _HAS_XGB = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_XGB = False
 
 try:
     from lightgbm import LGBMClassifier
     _HAS_LGBM = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_LGBM = False
 
 try:
     from catboost import CatBoostClassifier
     _HAS_CATBOOST = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_CATBOOST = False
 
 try:

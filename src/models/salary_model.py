@@ -22,19 +22,19 @@ from sklearn.tree import DecisionTreeRegressor
 try:
     from xgboost import XGBRegressor
     _HAS_XGB = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_XGB = False
 
 try:
     from lightgbm import LGBMRegressor
     _HAS_LGBM = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_LGBM = False
 
 try:
     from catboost import CatBoostRegressor
     _HAS_CATBOOST = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_CATBOOST = False
 
 from src.utils.logger import setup_logger
