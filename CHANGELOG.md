@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.2] — 2026-06-27
+
+### Adicionado
+- **`frontend/.env.local`** — `VITE_API_URL=https://jobmatch-api-hpan.onrender.com` para testar frontend local com API cloud
+- **`frontend/.env.example`** — Template documentado com placeholder para novos devs
+
+### Alterado
+- **`README.md`** — Adicionada seção "Running Locally with Cloud API"
+- **`todo.md`** — Checklist item 20 registrado
+
 ## [0.9.1] — 2026-06-27
 
 ### Corrigido

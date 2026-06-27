@@ -100,6 +100,21 @@ Acesse:
 - **Match**: http://localhost:5173 (dev) ou http://localhost (produção)
 - **API**: http://localhost:8000/docs
 
+### Testar frontend local com API na nuvem
+
+Para rodar o frontend React apontando para a API já deployada no Render:
+
+```bash
+cd frontend
+cp .env.example .env.local
+# Edite .env.local com a URL da sua API:
+# VITE_API_URL=https://jobmatch-api-hpan.onrender.com
+npm run dev
+```
+
+O frontend tentará a cloud primeiro; se falhar (container idle), cairá para `http://localhost:8000`.
+Sem `VITE_API_URL`, usa o proxy Vite (`/api` → `localhost:8000`).
+
 ---
 
 ## Deploy Free Tier — Render.com

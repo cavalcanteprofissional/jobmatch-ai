@@ -301,6 +301,7 @@
 | 17 | Testar endpoints públicos | ⬜ (manual) |
 | 18 | Atualizar `README.md` | ✅ |
 | 19 | Adicionar `libgomp1` no apt-get do Dockerfile e capturar OSError no try/except de lightgbm/xgboost | ✅ |
+| 20 | Criar `.env.local` e `.env.example` no frontend para testar local com API cloud | ✅ |
 
 ### Fluxo de acesso final
 
