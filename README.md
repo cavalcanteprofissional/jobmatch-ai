@@ -40,10 +40,14 @@ jobmatch/
 │   └── utils/            # Logger (RotatingFileHandler) + Config (dotenv)
 ├── tests/                # ~95 testes (pytest + pytest-cov, fail_under=60%)
 ├── logs/                 # Logs rotativos (não versionado)
-├── nginx.conf            # Proxy reverso (/api/ → FastAPI, / → React)
+├── deploy/               # Deploy: Dockerfile.frontend + nginx.conf
+├── render.yaml           # Render Blueprint (API Web Service)
 ├── Dockerfile            # Build da API FastAPI
-├── Dockerfile.frontend   # Build do frontend React (multi-stage)
 ├── docker-compose.yml    # api + frontend
+├── scripts/
+│   ├── startup.sh        # Inicialização do container (só uvicorn)
+│   ├── reload_eval.py    # Re-treino com nested CV (~10 min)
+│   └── build_skills_map.py
 └── train_pipeline.py     # Script unificado de treino
 ```
 
@@ -96,6 +100,70 @@ Acesse:
 - **Match**: http://localhost:5173 (dev) ou http://localhost (produção)
 - **API**: http://localhost:8000/docs
 
+---
+
+## Deploy Free Tier — Render.com
+
+> **Problema:** O free tier do Render tem 512 MB de RAM, insuficiente para
+> executar a pipeline de dados (123k vagas + NLTK + pandas) e o nested CV.
+>
+> **Solução:** Modelos treinados são embutidos na imagem Docker (~14 MB).
+> A imagem é construída com `data/models/` e `data/processed/` inclusos,
+> eliminando a necessidade de treinar no container.
+
+### Pré-requisitos
+
+```bash
+# 1. Treinar modelos LOCALMENTE (já feito se você rodou o setup)
+poetry run python train_pipeline.py
+poetry run python scripts/reload_eval.py
+
+# 2. Adicionar data/ ao git e fazer push
+git add data/
+git commit -m "feat: trained models for Docker deploy"
+git push origin feat/frontend-react
+```
+
+### Deploy da API (Web Service)
+
+1. Dashboard Render → **New +** → **Web Service**
+2. GitHub → `cavalcanteprofissional/jobmatch-ai` → branch `feat/frontend-react`
+3. **Name**: `jobmatch-api`
+4. **Runtime**: `Docker`
+5. **Health Check Path**: `/health`
+6. **Instance Type**: `Free`
+7. **Environment Variables**: *(nenhuma — configuradas no Dockerfile)*
+8. **Create Web Service** — aguardar build ~5 min
+
+### Deploy do Frontend (Static Site)
+
+1. Dashboard Render → **New +** → **Static Site**
+2. GitHub → `cavalcanteprofissional/jobmatch-ai` → branch `feat/frontend-react`
+3. **Name**: `jobmatch-frontend`
+4. **Root Directory**: `frontend`
+5. **Build Command**: `npm ci && npm run build`
+6. **Publish Directory**: `dist`
+7. **Environment Variable**: `VITE_API_URL = https://jobmatch-api.onrender.com`
+8. **Create Static Site** — aguardar ~2 min
+
+### Resultado
+
+```bash
+curl https://jobmatch-api.onrender.com/health
+# {"status":"ok","models_loaded":true,"jobs_count":2978}
+```
+
+Frontend em `https://jobmatch-frontend.onrender.com`, API em `https://jobmatch-api.onrender.com/docs`.
+
+### Fallback automático
+
+O frontend tenta a cloud primeiro (`VITE_API_URL`); se falhar
+(ex.: container em idle/sleep), cai para `http://localhost:8000`
+(API rodando local). Em desenvolvimento (sem `VITE_API_URL`),
+usa `/api` com proxy do Vite.
+
+---
+
 ## API REST
 
 | Método | Rota | Descrição |
@@ -103,7 +171,10 @@ Acesse:
 | `POST` | `/predict` | Predição completa (score, fit, salário, gap, top vagas) |
 | `GET`  | `/health` | Health check do servidor |
 | `GET`  | `/models/info` | Metadados dos modelos carregados |
-| `GET`  | `/metrics` | Métricas de uso (latência, erros, requisições por endpoint) |
+| `GET`  | `/models/metrics` | Métricas de avaliação dos modelos (accuracy, F1, RMSE, nested CV) |
+| `GET`  | `/eval/classification` | Dados de avaliação do classificador (y_true, y_pred, y_prob) |
+| `GET`  | `/eval/regression` | Dados de avaliação da regressão salarial (y_true, y_pred) |
+| `GET`  | `/metrics` | Métricas de uso da API (latência, erros, requisições por endpoint) |
 
 ```bash
 curl -X POST http://localhost:8000/predict \

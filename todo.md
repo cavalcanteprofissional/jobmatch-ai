@@ -251,16 +251,21 @@
 |---------|-----------|------|-------|
 | API FastAPI | Render | Web Service (Docker) | Free |
 | Frontend React | Render | Static Site | Free |
-| Dados persistentes | Render | Disk (1 GB) mount `/app/data` | Free |
+| Modelos treinados | Embutidos na imagem Docker (~14 MB) | `data/models/` + `data/processed/` incluídos no build | — |
+
+> **Motivo:** Free tier do Render tem 512 MB de RAM, insuficiente para rodar
+> `compose_datasets` + `train_pipeline` + `reload_eval`. Solução: treinar local,
+> commitar `data/` (modelos + dados processados) no git, e embutir na imagem Docker.
 
 ### Arquivos de Deploy
 
 | Arquivo | Função |
 |---------|--------|
 | `Dockerfile` (raiz) | Build da API Python (multistage, Poetry, python:3.11-slim) |
-| `render.yaml` (raiz) | Blueprint Render: define Web Service (API) + Disk. Frontend criado manualmente |
-| `scripts/startup.sh` | Script de inicialização: treina modelos se `data/` estiver vazio |
-| `frontend/src/services/api.ts` | Usa `VITE_API_URL` (variável de ambiente Render) para URL absoluta |
+| `render.yaml` (raiz) | Blueprint Render: define Web Service (API). Frontend criado manualmente |
+| `scripts/startup.sh` | Só inicia uvicorn. Modelos vêm embutidos na imagem (sem pipeline) |
+| `frontend/src/services/api.ts` | Fallback: cloud → local. Usa `VITE_API_URL` se disponível |
+| `.dockerignore` | Exclui `data/raw/` mas **inclui** `data/models/` e `data/processed/` |
 
 ### Bugs corrigidos nesta fase
 
@@ -269,6 +274,7 @@
 | B1 | `TypeError: 'NoneType' object is not iterable` ao iniciar API | `src/api/server.py:192` | `app.openapi_tags` é `None` por padrão, não lista vazia. Substituído loop de dedup por `app.openapi_tags = TAGS_META` | 26/06 |
 | B2 | `type: static` não suportado no Render Blueprint | `render.yaml` | Removido do `render.yaml`. Frontend Static Site criado manualmente via Dashboard | 26/06 |
 | B3 | Env vars `PYTHONUNBUFFERED`/`PYTHONDONTWRITEBYTECODE` desnecessárias no Dashboard | `Dockerfile`, `render.yaml` | Movidas para `ENV` no Dockerfile. `render.yaml` e `docker-compose.yml` limpos | 26/06 |
+| B4 | `Out of Memory (512 Mi)` no free tier ao executar pipeline de treino | `scripts/startup.sh`, `.dockerignore` | **Mudança de estratégia:** modelos embutidos na imagem Docker. `startup.sh` simplificado (só uvicorn). `.dockerignore` agora inclui `data/models/` e `data/processed/` | 27/06 |
 
 ### Checklist
 
@@ -281,13 +287,15 @@
 | 5 | Corrigir `app.openapi_tags` (None → lista) em `server.py` | ✅ |
 | 6 | Corrigir `render.yaml` — remover `type: static` | ✅ |
 | 7 | Mover env vars Python para `ENV` no Dockerfile (0 env vars no Render) | ✅ |
-| 8 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
-| 9 | Deploy API (Web Service manual) no Render | ⬜ (manual) |
-| 10 | Deploy Frontend (Static Site manual) no Render | ⬜ (manual) |
-| 11 | Configurar Disk persistente em `/app/data` para API | ⬜ (manual) |
-| 12 | Rodar `reload_eval.py` via Render Shell para gerar modelos | ⬜ (manual) |
-| 13 | Testar endpoints públicos | ⬜ (manual) |
-| 14 | Atualizar `CHANGELOG.md` e commitar | ⬜ |
+| 8 | Simplificar `startup.sh` (só uvicorn, sem pipeline de treino) | ✅ |
+| 9 | Ajustar `.dockerignore` (incluir `data/models/` e `data/processed/`) | ✅ |
+| 10 | Ajustar `.gitignore` (incluir modelos treinados) | ✅ |
+| 11 | Ajustar `api.ts` com fallback cloud → local | ✅ |
+| 12 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
+| 13 | Deploy API (Web Service) no Render com modelos embutidos | ⬜ (manual) |
+| 14 | Deploy Frontend (Static Site) no Render | ⬜ (manual) |
+| 15 | Testar endpoints públicos | ⬜ (manual) |
+| 16 | Atualizar `README.md` | ✅ |
 
 ### Fluxo de acesso final
 

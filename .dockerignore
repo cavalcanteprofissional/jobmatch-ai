@@ -2,14 +2,8 @@
 .git
 .gitignore
 
-# Data (montado via volume)
+# Raw data (muito grande — 159 MB, não cabe no free tier)
 data/raw/
-data/processed/
-data/models/
-*.csv
-*.parquet
-*.npz
-*.pkl
 
 # Environment
 .env

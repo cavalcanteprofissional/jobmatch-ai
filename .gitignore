@@ -6,13 +6,6 @@ kaggle.json
 
 # ─── Dados ─────────────────────────────────────────────────
 data/raw/
-data/processed/
-data/models/
-*.csv
-*.parquet
-*.npz
-*.pkl
-!data/.gitkeep
 
 # ─── Python ────────────────────────────────────────────────
 __pycache__/

@@ -1,0 +1,64 @@
+{
+  "classification": {
+    "vectorizer": "tfidf",
+    "model_type": "ExtraTreesClassifier",
+    "accuracy": 0.6565,
+    "f1_score": 0.7095,
+    "precision": 0.6114,
+    "recall": 0.8452,
+    "test_samples": 1249,
+    "confusion_matrix": [
+      [
+        296,
+        333
+      ],
+      [
+        96,
+        524
+      ]
+    ],
+    "nested_cv": {
+      "scores": [
+        0.6866,
+        0.6756
+      ],
+      "mean": 0.6811,
+      "std": 0.0055
+    },
+    "best_params": {
+      "n_estimators": 200,
+      "min_samples_split": 2,
+      "max_depth": 10
+    },
+    "best_candidate": "extra_trees"
+  },
+  "regression": {
+    "model_type": "GradientBoostingRegressor",
+    "rmse": 35267.46,
+    "mae": 24168.16,
+    "r2": 0.3341,
+    "test_samples": 179,
+    "nested_cv": {
+      "scores": [
+        38224.28,
+        42545.89,
+        38183.88
+      ],
+      "mean": 39651.35,
+      "std": 2046.82
+    },
+    "best_params": {
+      "n_estimators": 300,
+      "max_depth": 3,
+      "learning_rate": 0.05
+    },
+    "best_candidate": "gradient_boosting"
+  },
+  "model_info": {
+    "vectorizer": "tfidf",
+    "total_jobs": 2978,
+    "jobs_with_salary": 891,
+    "training_pairs": 6241,
+    "vectorizer_features": 15000
+  }
+}

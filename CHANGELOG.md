@@ -1,11 +1,21 @@
 # Changelog
 
-## [0.9.1] — 2026-06-26
+## [0.9.1] — 2026-06-27
 
 ### Corrigido
 - **`TypeError: 'NoneType' object is not iterable` na inicialização da API** — `app.openapi_tags` é `None` por padrão no FastAPI. O loop de deduplicação em `server.py:192` tentava iterar sobre `None` ao usar `getattr(app, "openapi_tags", [])` (o atributo existe, mas é `None`). Substituído por `app.openapi_tags = TAGS_META` direto.
 - **`render.yaml` com `type: static` inválido** — Render Blueprint não suporta `type: static`. Seção do frontend removida do `render.yaml`. Frontend será criado como Static Site manualmente no Dashboard.
 - **Env vars movidas para o Dockerfile** — `PYTHONUNBUFFERED` e `PYTHONDONTWRITEBYTECODE` agora são `ENV` no `Dockerfile`, eliminando necessidade de configurá-las no Render Dashboard ou no `docker-compose.yml`.
+
+### Alterado (estratégia de deploy para free tier)
+- **`scripts/startup.sh` simplificado** — Remove pipeline de treino (`compose_datasets` + `train_pipeline` + `reload_eval`). Agora só verifica se modelos existem e inicia uvicorn. Modelos são embutidos na imagem Docker (~14 MB).
+- **`.dockerignore` reescrito** — Agora **inclui** `data/models/` e `data/processed/` na imagem Docker (antes excluía tudo de `data/`).
+- **`.gitignore` simplificado** — Remove exclusão de `*.pkl`, `*.parquet`, `*.npz` — permite versionar modelos treinados.
+- **`api.ts` com fallback cloud → local** — Em produção (Static Site com `VITE_API_URL`), tenta cloud primeiro; se falhar, cai para `http://localhost:8000`. Em dev, usa `/api` (Vite proxy).
+
+### Motivação
+- Free tier do Render tem 512 MB de RAM — insuficiente para rodar pipeline de dados (123k vagas + NLTK + pandas + lematização).
+- Solução: treinar local, commitar `data/` no git, embutir na imagem Docker.
 
 ## [0.9.0] — 2026-06-26
 

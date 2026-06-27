@@ -3,18 +3,32 @@ import type {
   ModelMetrics, EvalClassificationResponse, EvalRegressionResponse,
 } from './models'
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+const CLOUD_API = import.meta.env.VITE_API_URL || ''
+const LOCAL_API = 'http://localhost:8000'
+const DEV_API = '/api'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`${res.status}: ${body}`)
+  const urls = CLOUD_API
+    ? [`${CLOUD_API}${path}`, `${LOCAL_API}${path}`]
+    : [`${DEV_API}${path}`]
+
+  let lastError: Error | null = null
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      })
+      if (!res.ok) {
+        const body = await res.text()
+        throw new Error(`${res.status}: ${body}`)
+      }
+      return res.json()
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e))
+    }
   }
-  return res.json()
+  throw lastError!
 }
 
 export const api = {
