@@ -275,6 +275,7 @@
 | B2 | `type: static` não suportado no Render Blueprint | `render.yaml` | Removido do `render.yaml`. Frontend Static Site criado manualmente via Dashboard | 26/06 |
 | B3 | Env vars `PYTHONUNBUFFERED`/`PYTHONDONTWRITEBYTECODE` desnecessárias no Dashboard | `Dockerfile`, `render.yaml` | Movidas para `ENV` no Dockerfile. `render.yaml` e `docker-compose.yml` limpos | 26/06 |
 | B4 | `Out of Memory (512 Mi)` no free tier ao executar pipeline de treino | `scripts/startup.sh`, `.dockerignore` | **Mudança de estratégia:** modelos embutidos na imagem Docker. `startup.sh` simplificado (só uvicorn). `.dockerignore` agora inclui `data/models/` e `data/processed/` | 27/06 |
+| B5 | `Exited with status 1` no Render após inicio — NLTK data não baixada na imagem | `Dockerfile`, `scripts/startup.sh` | Adicionado `nltk.download` no builder stage. Adicionado import test no `startup.sh`. Removido `HEALTHCHECK` do Dockerfile (conflito com health check do Render) | 27/06 |
 
 ### Checklist
 
@@ -291,11 +292,13 @@
 | 9 | Ajustar `.dockerignore` (incluir `data/models/` e `data/processed/`) | ✅ |
 | 10 | Ajustar `.gitignore` (incluir modelos treinados) | ✅ |
 | 11 | Ajustar `api.ts` com fallback cloud → local | ✅ |
-| 12 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
-| 13 | Deploy API (Web Service) no Render com modelos embutidos | ⬜ (manual) |
-| 14 | Deploy Frontend (Static Site) no Render | ⬜ (manual) |
-| 15 | Testar endpoints públicos | ⬜ (manual) |
-| 16 | Atualizar `README.md` | ✅ |
+| 12 | Adicionar NLTK data download no Dockerfile | ✅ |
+| 13 | Adicionar import test no startup.sh + remover HEALTHCHECK | ✅ |
+| 14 | Criar conta no Render + conectar GitHub | ⬜ (manual) |
+| 15 | Deploy API (Web Service) no Render com modelos embutidos | ⬜ (manual) |
+| 16 | Deploy Frontend (Static Site) no Render | ⬜ (manual) |
+| 17 | Testar endpoints públicos | ⬜ (manual) |
+| 18 | Atualizar `README.md` | ✅ |
 
 ### Fluxo de acesso final
 

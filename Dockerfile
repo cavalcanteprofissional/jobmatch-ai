@@ -13,6 +13,7 @@ RUN poetry config virtualenvs.create false \
 
 COPY . .
 RUN poetry install --no-interaction --no-ansi --only main
+RUN python -m nltk.downloader punkt stopwords wordnet -q
 
 FROM python:3.11-slim AS runtime
 
@@ -33,7 +34,7 @@ RUN chmod +x /app/scripts/startup.sh
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# Health check é feito externamente pelo Render (healthCheckPath: /health)
+# HEALTHCHECK removido para evitar conflito
 
 CMD ["/app/scripts/startup.sh"]

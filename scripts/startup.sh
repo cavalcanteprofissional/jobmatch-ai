@@ -10,7 +10,10 @@ echo "=== JobMatch AI Startup ==="
 MODELS_DIR="/app/data/models"
 
 if [ -f "$MODELS_DIR/metrics.json" ] && [ -f "$MODELS_DIR/classifier.pkl" ]; then
-    echo "✓ Modelos encontrados. Iniciando servidor..."
+    echo "✓ Modelos encontrados."
+    echo "→ Testando import do app..."
+    python -c "from src.api.server import app; print('✓ App importado com sucesso')"
+    echo "→ Iniciando servidor..."
     exec uvicorn src.api.server:app --host 0.0.0.0 --port 8000
 fi
 

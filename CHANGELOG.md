@@ -13,6 +13,12 @@
 - **`.gitignore` simplificado** — Remove exclusão de `*.pkl`, `*.parquet`, `*.npz` — permite versionar modelos treinados.
 - **`api.ts` com fallback cloud → local** — Em produção (Static Site com `VITE_API_URL`), tenta cloud primeiro; se falhar, cai para `http://localhost:8000`. Em dev, usa `/api` (Vite proxy).
 
+### Corrigido
+- **`Exited with status 1` no Render** — NLTK data (`punkt`, `stopwords`, `wordnet`) não era baixada na imagem Docker. `preprocess.py` tentava baixar via `nltk.download()` no import, mas o diretório `~/nltk_data` não era gravável ou o download falhava silenciosamente.
+  - `Dockerfile`: adicionado `RUN python -m nltk.downloader punkt stopwords wordnet -q` após `poetry install`.
+  - `Dockerfile`: removido `HEALTHCHECK` interno (conflito com health check externo do Render).
+  - `startup.sh`: adicionado `python -c "from src.api.server import app"` para testar import antes de iniciar uvicorn, exibindo erro completo no log se falhar.
+
 ### Motivação
 - Free tier do Render tem 512 MB de RAM — insuficiente para rodar pipeline de dados (123k vagas + NLTK + pandas + lematização).
 - Solução: treinar local, commitar `data/` no git, embutir na imagem Docker.
