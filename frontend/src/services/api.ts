@@ -4,21 +4,32 @@ import type {
 } from './models'
 
 const CLOUD_API = import.meta.env.VITE_API_URL || ''
-const LOCAL_API = 'http://localhost:8000'
 const DEV_API = '/api'
 
+const TIMEOUT_MS = 15_000
+const MAX_RETRIES = 3
+const BACKOFF_MS = [2_000, 4_000, 8_000]
+
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeoutMs)
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id))
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const urls = CLOUD_API
-    ? [`${CLOUD_API}${path}`, `${LOCAL_API}${path}`]
-    : [`${DEV_API}${path}`]
+  const url = CLOUD_API ? `${CLOUD_API}${path}` : `${DEV_API}${path}`
+  const attempts = CLOUD_API ? MAX_RETRIES : 1
 
   let lastError: Error | null = null
-  for (const url of urls) {
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) {
+      await new Promise((r) => setTimeout(r, BACKOFF_MS[i - 1] ?? BACKOFF_MS[BACKOFF_MS.length - 1]))
+    }
     try {
-      const res = await fetch(url, {
+      const res = await fetchWithTimeout(url, {
         headers: { 'Content-Type': 'application/json' },
         ...options,
-      })
+      }, TIMEOUT_MS)
       if (!res.ok) {
         const body = await res.text()
         throw new Error(`${res.status}: ${body}`)

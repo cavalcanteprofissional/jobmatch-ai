@@ -279,6 +279,7 @@
 | B6 | `libgomp.so.1: cannot open shared object file` — lightgbm/xgboost crasham no import mesmo com try/except ImportError | `Dockerfile`, `classifier.py`, `salary_model.py` | `try/except ImportError` não captura `OSError` (ctypes `_dlopen`). Solução: `libgomp1` no apt-get + trocar `except ImportError` por `except (ImportError, OSError)` nos blocos de lightgbm e xgboost | 27/06 |
 | B7 | CORS — frontend local não consegue bater na API do Render | `server.py` | Adicionado `CORSMiddleware` com origens `localhost:5173`, `localhost:3000`, `https://jobmatch-frontend.onrender.com` | 27/06 |
 | B8 | SPA routing — aba Monitor crasha "Not Found" ao clicar (navegação nativa `<a>` em vez de `<Link>`) | `App.tsx` | Trocar `<a href>` por `<Link to>` + criar `_redirects` para SPA fallback no Render | 27/06 |
+| B9 | Monitor mostra "API não disponível" — cold start do free tier + fallback localhost inválido + sem timeout/retry | `api.ts`, `Monitor.tsx` | Remover fallback localhost em produção. Adicionar AbortController timeout (15s) + retry (3x, backoff 2-4-8s). Loading state com spinner no Monitor | 27/06 |
 
 ### Checklist
 
@@ -411,3 +412,27 @@ Navegador → https://jobmatch.onrender.com (Static Site React)
                               ↓
                     fetch("/api/predict") → https://jobmatch-api.onrender.com/predict (Web Service)
 ```
+
+---
+
+## Fase 10 — Cold Start + Timeout + Retry no Frontend (EM ANDAMENTO — branch `feat/frontend-react`)
+
+### Problema
+Monitor mostra "API não disponível" porque:
+1. Render free tier dorme após 15 min de inatividade → cold start de ~30-60s
+2. `api.ts` faz fallback para `localhost:8000` em produção (inútil e demorado)
+3. `fetch()` sem timeout — espera até o timeout do navegador (60-300s)
+4. Sem retry — se a primeira tentativa falha (container restartando), não tenta de novo
+5. Monitor não tem loading state — mostra "erro" imediatamente sem distinção de "carregando"
+
+### Checklist
+
+| # | Tarefa | Status |
+|---|--------|--------|
+| 1 | `api.ts`: remover fallback localhost quando `VITE_API_URL` existir | ✅ |
+| 2 | `api.ts`: adicionar `AbortController` com timeout configurável | ✅ |
+| 3 | `api.ts`: adicionar retry com backoff exponencial (3 tentativas, 2-4-8s) | ✅ |
+| 4 | `Monitor.tsx`: adicionar loading state, spinner durante carregamento | ✅ |
+| 5 | `Monitor.tsx`: botão "Tentar novamente" após todas as tentativas esgotarem | ✅ |
+| 6 | Build + teste local | ⬜ |
+| 7 | Commit + push | ⬜ |

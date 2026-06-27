@@ -13,13 +13,28 @@ export default function Monitor() {
   const [evalClf, setEvalClf] = useState<EvalClassificationResponse | null>(null)
   const [evalReg, setEvalReg] = useState<EvalRegressionResponse | null>(null)
   const [tab, setTab] = useState<'ml' | 'api'>('ml')
+  const [loadingMl, setLoadingMl] = useState(true)
+  const [loadingApi, setLoadingApi] = useState(true)
 
-  useEffect(() => {
+  function loadMl() {
+    setLoadingMl(true)
+    setModelMetrics(null)
+    setEvalClf(null)
+    setEvalReg(null)
     api.modelMetrics().then(setModelMetrics).catch(() => setModelMetrics(null))
-    api.metrics().then(setApiMetrics).catch(() => setApiMetrics(null))
     api.evalClassification().then(setEvalClf).catch(() => setEvalClf(null))
     api.evalRegression().then(setEvalReg).catch(() => setEvalReg(null))
-  }, [])
+      .finally(() => setLoadingMl(false))
+  }
+
+  function loadApi() {
+    setLoadingApi(true)
+    setApiMetrics(null)
+    api.metrics().then(setApiMetrics).catch(() => setApiMetrics(null))
+      .finally(() => setLoadingApi(false))
+  }
+
+  useEffect(() => { loadMl(); loadApi() }, [])
 
   const clf = modelMetrics?.classification
   const reg = modelMetrics?.regression
@@ -164,9 +179,14 @@ export default function Monitor() {
             </div>
           </section>
         </div>
+      ) : tab === 'ml' && loadingMl ? (
+        <LoadingSpinner />
       ) : tab === 'ml' && !modelMetrics ? (
         <div className="p-6 bg-yellow-50 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700 rounded-lg text-yellow-800 dark:text-yellow-200 transition-colors">
-          Métricas dos modelos não disponíveis. Execute o treino dos modelos (reload_eval.py) e reinicie a API.
+          <p>Métricas dos modelos não disponíveis. Execute o treino dos modelos (reload_eval.py) e reinicie a API.</p>
+          <button onClick={loadMl} className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors">
+            Tentar novamente
+          </button>
         </div>
       ) : null}
 
@@ -209,9 +229,14 @@ export default function Monitor() {
             </section>
           )}
         </div>
+      ) : tab === 'api' && loadingApi ? (
+        <LoadingSpinner />
       ) : tab === 'api' && !apiMetrics ? (
         <div className="p-6 bg-yellow-50 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700 rounded-lg text-yellow-800 dark:text-yellow-200 transition-colors">
-          API não disponível. Execute a API primeiro.
+          <p>API não disponível. Execute a API primeiro.</p>
+          <button onClick={loadApi} className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors">
+            Tentar novamente
+          </button>
         </div>
       ) : null}
     </div>
@@ -223,6 +248,14 @@ function Metric({ label, value, className }: { label: string; value: string; cla
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-center transition-colors">
       <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
       <p className={`text-lg font-bold text-gray-900 dark:text-gray-100 ${className ?? ''}`}>{value}</p>
+    </div>
+  )
+}
+
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400" />
     </div>
   )
 }
