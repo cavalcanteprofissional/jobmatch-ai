@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Link, Routes, Route, Navigate } from 'react-router-dom'
 import { useTheme } from './context/ThemeContext'
 
 const JobMatch = lazy(() => import('./pages/JobMatch'))
@@ -12,9 +12,9 @@ function App() {
     <div className="min-h-screen bg-primary dark:bg-primary-dark transition-colors">
       <nav className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6">
-          <a href="/" className="font-bold text-lg text-indigo-600 dark:text-indigo-400">JobMatch AI</a>
-          <a href="/" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Match</a>
-          <a href="/monitor" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Monitor</a>
+          <Link to="/" className="font-bold text-lg text-indigo-600 dark:text-indigo-400">JobMatch AI</Link>
+          <Link to="/" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Match</Link>
+          <Link to="/monitor" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Monitor</Link>
           <div className="ml-auto">
             <button
               onClick={toggle}

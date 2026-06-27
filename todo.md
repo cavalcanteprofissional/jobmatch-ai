@@ -278,6 +278,7 @@
 | B5 | `Exited with status 1` no Render após inicio — NLTK data não baixada na imagem | `Dockerfile`, `scripts/startup.sh` | Adicionado `nltk.download` no builder stage. Adicionado import test no `startup.sh`. Removido `HEALTHCHECK` do Dockerfile (conflito com health check do Render) | 27/06 |
 | B6 | `libgomp.so.1: cannot open shared object file` — lightgbm/xgboost crasham no import mesmo com try/except ImportError | `Dockerfile`, `classifier.py`, `salary_model.py` | `try/except ImportError` não captura `OSError` (ctypes `_dlopen`). Solução: `libgomp1` no apt-get + trocar `except ImportError` por `except (ImportError, OSError)` nos blocos de lightgbm e xgboost | 27/06 |
 | B7 | CORS — frontend local não consegue bater na API do Render | `server.py` | Adicionado `CORSMiddleware` com origens `localhost:5173`, `localhost:3000`, `https://jobmatch-frontend.onrender.com` | 27/06 |
+| B8 | SPA routing — aba Monitor crasha "Not Found" ao clicar (navegação nativa `<a>` em vez de `<Link>`) | `App.tsx` | Trocar `<a href>` por `<Link to>` + criar `_redirects` para SPA fallback no Render | 27/06 |
 
 ### Checklist
 
