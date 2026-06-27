@@ -19,21 +19,13 @@ services:
     networks:
       - jobmatch-net
 
-  streamlit:
+  frontend:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: jobmatch-streamlit
+      dockerfile: Dockerfile.frontend
+    container_name: jobmatch-frontend
     ports:
-      - "8501:8501"
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-      - ./.env.local:/app/.env.local:ro
-    environment:
-      - STREAMLIT_USE_API=true
-      - API_URL=http://api:8000
-    command: streamlit run src/app/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+      - "80:80"
     depends_on:
       - api
     restart: unless-stopped

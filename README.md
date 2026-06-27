@@ -11,9 +11,10 @@ Sistema de Machine Learning para matching inteligente entre currículos e vagas 
 - **Estimativa Salarial**: Regressão (GradientBoosting / XGBoost / LightGBM / RF / ET / SGD / DT / KNN) para prever faixa salarial por cargo
 - **Embeddings Semânticos (SBERT)**: Opcional — Sentence-BERT `all-MiniLM-L6-v2` para classificação com MLP/GaussianNB
 - **API REST**: Endpoints FastAPI para predição, health check, info dos modelos e métricas
-- **Frontend Híbrido**: Streamlit que consome a API REST com fallback direto para os modelos
-- **Dashboard de Monitoramento**: Métricas em tempo real (latência, erros, requisições) + gráficos Altair do modelo ML (heatmap, histograma de scores, scatter salários)
-- **Docker**: Deploy multi-stage com Docker Compose (FastAPI + Streamlit)
+- **Frontend React + Vite**: SPA moderna com TypeScript, Tailwind CSS e Recharts
+- **Página Match**: Upload de PDF/DOCX, formulário de análise, resultados com cards, skills e plano de desenvolvimento
+- **Página Monitor**: Dashboard com métricas do modelo ML (matriz de confusão, nested CV, scatter) e métricas da API (latência, requisições, erros)
+- **Docker**: Deploy multi-stage com Docker Compose (FastAPI + Nginx + React)
 - **CI/CD**: GitHub Actions (lint + testes + coverage) com deploy automático para GHCR
 
 ## Arquitetura
@@ -24,21 +25,25 @@ jobmatch/
 │   ├── raw/              # Datasets originais (não versionado)
 │   ├── processed/        # Dados limpos em Parquet (não versionado)
 │   └── models/           # Modelos serializados joblib (não versionado)
+├── frontend/             # React + Vite + TypeScript + Tailwind
+│   ├── src/
+│   │   ├── pages/        # JobMatch.tsx, Monitor.tsx
+│   │   ├── components/   # Charts (Recharts), MetricCard, etc.
+│   │   └── services/     # api.ts, models.ts
+│   └── package.json
 ├── src/
 │   ├── pipeline/         # Download (Kaggle + HF), limpeza e composição
 │   ├── models/           # TF-IDF, classificador, recommender, salary model
 │   ├── skills/           # Gap analysis de skills
 │   ├── api/              # FastAPI server + JobMatchPredictor singleton
-│   ├── app/              # Frontend Streamlit híbrido
 │   ├── monitoring/       # MetricsCollector singleton
 │   └── utils/            # Logger (RotatingFileHandler) + Config (dotenv)
-├── notebooks/            # Jupyter notebooks de EDA e experimentos
 ├── tests/                # ~95 testes (pytest + pytest-cov, fail_under=60%)
 ├── logs/                 # Logs rotativos (não versionado)
-├── .env.example          # Template de variáveis de ambiente
-├── .env.local            # Config local com credenciais (não versionado)
-├── .gitignore
-├── pyproject.toml        # Poetry: dependências e build
+├── nginx.conf            # Proxy reverso (/api/ → FastAPI, / → React)
+├── Dockerfile            # Build da API FastAPI
+├── Dockerfile.frontend   # Build do frontend React (multi-stage)
+├── docker-compose.yml    # api + frontend
 └── train_pipeline.py     # Script unificado de treino
 ```
 
@@ -56,17 +61,14 @@ jobmatch/
 # 1. Instalar Poetry via pipx
 pipx install poetry
 
-# 2. Instalar dependências do projeto
+# 2. Instalar dependências do projeto (Python)
 poetry install
 
 # 3. Ativar ambiente virtual
 poetry shell
 
 # 4. Configurar credenciais Kaggle
-#    Copie .env.example para .env.local e preencha suas credenciais:
-#    KAGGLE_USERNAME=seu_usuario
-#    KAGGLE_KEY=sua_chave_api
-#    Ou edite diretamente .env.local (já incluso no .gitignore)
+#    Copie .env.example para .env.local e preencha suas credenciais
 
 # 5. Executar pipeline de dados (download + composição)
 python -c "from src.pipeline.compose_datasets import main; main()"
@@ -74,14 +76,14 @@ python -c "from src.pipeline.compose_datasets import main; main()"
 # 6. Treinar modelos
 python train_pipeline.py
 
-# 7. Rodar API REST (opcional — necessário para modo híbrido)
+# 7. Instalar dependências do frontend
+cd frontend && npm install
+
+# 8. Rodar frontend em modo dev (porta 5173, proxy /api → localhost:8000)
+npm run dev
+
+# 9. Rodar API REST
 uvicorn src.api.server:app --host 0.0.0.0 --port 8000
-
-# 8. Rodar frontend Streamlit (modo híbrido)
-streamlit run src/app/streamlit_app.py
-
-# 9. Dashboard de monitoramento (requer API rodando ou modelos pré-treinados)
-streamlit run src/app/monitor_dashboard.py --server.port 8501
 
 # 10. Re-treino rápido + dados de avaliação com nested CV (opcional, ~10 min)
 python scripts/reload_eval.py
@@ -89,6 +91,10 @@ python scripts/reload_eval.py
 # 11. Docker (deploy completo)
 docker compose up --build
 ```
+
+Acesse:
+- **Match**: http://localhost:5173 (dev) ou http://localhost (produção)
+- **API**: http://localhost:8000/docs
 
 ## API REST
 
@@ -140,14 +146,12 @@ poetry run pytest tests/ -v --cov=src --ignore=tests/test_load_data.py
 
 ## Stack
 
+### Backend (Python)
 - Python 3.11–3.12
 - scikit-learn (TF-IDF, RF, LR, SVM, ExtraTrees, KNN, GB, stacking, voting)
 - XGBoost (classificação — melhor F1 72.33%)
 - LightGBM (classificação + regressão)
 - FastAPI + Uvicorn (REST API)
-- Streamlit + Altair (frontend híbrido + dashboard de monitoramento com gráficos)
-- Docker + Docker Compose (deploy)
-- GitHub Actions (CI/CD)
 - Parquet + pyarrow (armazenamento)
 - rapidfuzz (fuzzy match)
 - NLTK (lemmatização e stopwords)
@@ -155,7 +159,18 @@ poetry run pytest tests/ -v --cov=src --ignore=tests/test_load_data.py
 - Sentence-Transformers (SBERT + cross-encoder, opcional — grupo `nlp`)
 - Poetry (dependências)
 - pytest + pytest-cov (testes, fail_under=60%)
-- python-dotenv (config segura)
+
+### Frontend (TypeScript)
+- Vite (build)
+- React 18 + TypeScript
+- Tailwind CSS (estilo)
+- Recharts (gráficos)
+- react-dropzone (upload)
+- React Router v6
+
+### Infra
+- Docker + Docker Compose (api + frontend com Nginx)
+- GitHub Actions (CI/CD)
 
 ## Licença
 

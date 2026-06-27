@@ -49,5 +49,9 @@ Dockerfile
 docker-compose.yml
 .dockerignore
 
+# Node
+frontend/node_modules/
+frontend/dist/
+
 # Docs
 *.md

@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.9.0] — 2026-06-26
+
+### Adicionado
+- **Frontend React + Vite + TypeScript** — Substitui os dois Streamlits por um SPA moderno.
+  - `frontend/` — Scaffold completo com Vite, React 18, TypeScript, Tailwind CSS
+  - Página **JobMatch**: upload PDF/DOCX com react-dropzone, formulário de análise, cards de métricas, vagas expansíveis, skills (compatíveis/faltantes), plano de desenvolvimento
+  - Página **Monitor**: abas Modelo ML (matriz de confusão, métricas, nested CV, scatter, comparação TF-IDF vs SBERT) e API (requisições, erros, latência), gráficos com Recharts
+  - `Dockerfile.frontend` — Build multi-stage (node → nginx)
+  - `nginx.conf` — Proxy reverso: `/api/` → FastAPI, `/` → SPA React
+
+### Removido
+- `src/app/streamlit_app.py` — Substituído pela página JobMatch React
+- `src/app/monitor_dashboard.py` — Substituído pela página Monitor React
+- Serviço `streamlit` do `docker-compose.yml` — Substituído por `frontend` (nginx porta 80)
+
+### Alterado
+- `docker-compose.yml` — Serviço `streamlit` removido, serviço `frontend` adicionado
+- `README.md` — Setup, arquitetura e stack atualizados para React
+- `todo.md` — Fase 6 documentada (migração frontend)
+- `.dockerignore` — Adicionado frontend/node_modules e frontend/dist
+
 ## [0.8.0] — 2026-06-26
 
 ### Corrigido

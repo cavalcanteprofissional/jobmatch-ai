@@ -182,6 +182,46 @@
 
 ---
 
+---
+
+## Fase 6 — Migração Frontend: Streamlit → React + Vite (EM ANDAMENTO — branch `feat/frontend-react`)
+
+### Motivação
+- Streamlit é limitado para UI complexa, Two Streamlits separados fragmentam a experiência
+- React + Vite + Tailwind oferece componentização, tipagem forte e performance
+- Backend REST FastAPI já está pronto, frontend só adiciona consumo
+
+### Plano de substituição
+
+| Etapa | Tarefa | Status |
+|-------|--------|--------|
+| 1 | Scaffold Vite + React 18 + TypeScript + Tailwind | ⬜ |
+| 2 | Serviço de API (`api.ts`) + tipos TypeScript (`models.ts`) | ⬜ |
+| 3 | Página JobMatch (upload PDF/DOCX, formulário, resultados, skills) | ⬜ |
+| 4 | Página Monitor (métricas ML, gráficos Recharts, métricas API) | ⬜ |
+| 5 | `Dockerfile.frontend` + `nginx.conf` (proxy reverso) | ⬜ |
+| 6 | Atualizar `docker-compose.yml` (api + frontend, remover streamlit) | ⬜ |
+| 7 | Remover `src/app/streamlit_app.py` e `src/app/monitor_dashboard.py` | ⬜ |
+| 8 | Atualizar `README.md` (setup, stack, testes) + `CHANGELOG.md` | ⬜ |
+
+### Stack
+| Camada | Escolha |
+|--------|---------|
+| Build | Vite |
+| UI | React 18 + TypeScript |
+| Estilo | Tailwind CSS |
+| Gráficos | Recharts |
+| Upload | react-dropzone |
+| Router | React Router v6 |
+| HTTP | fetch nativo |
+
+### O que NÃO muda
+- `src/api/server.py`, `src/api/predictor.py`, `src/monitoring/` — intactos
+- Pipeline de dados, modelos, testes — intactos
+- `pyproject.toml` — Streamlit pode virar dependência opcional ou ser removido
+
+---
+
 ## Decisões Técnicas
 
 | Decisão | Escolha | Motivo |
@@ -191,7 +231,8 @@
 | Serialização | joblib | Padrão sklearn |
 | Formato dados | Parquet (pyarrow) | Eficiente para colunas textuais |
 | Fuzzy match | rapidfuzz | Mais rápido que fuzzywuzzy |
-| Frontend | Streamlit + FastAPI | Híbrido: REST com fallback direto |
+| Frontend (atual) | React + Vite + Tailwind | Substituiu Streamlit por componentização e perfomance |
+| Frontend (legado) | Streamlit + FastAPI | Híbrido: REST com fallback direto (removido) |
 | Python | >=3.11,<3.13 | Compatibilidade com dependências |
 | Gerenciamento | Poetry | Reprodutibilidade de ambiente |
 | Testes | pytest + pytest-cov | 78 testes → ~95, fail_under=55% → 60% |
