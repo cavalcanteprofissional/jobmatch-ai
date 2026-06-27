@@ -7,8 +7,6 @@ interface Props {
   matrix: number[][]
 }
 
-const COLORS = ['#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8']
-
 export default function ConfusionMatrix({ matrix }: Props) {
   const data = useMemo(() => {
     const labels = ['No Fit', 'Fit']
@@ -23,15 +21,18 @@ export default function ConfusionMatrix({ matrix }: Props) {
 
   return (
     <div>
-      <h3 className="font-semibold mb-2">Matriz de Confusão</h3>
+      <h3 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">Matriz de Confusão</h3>
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={data} layout="vertical" margin={{ left: 60, right: 20, top: 10, bottom: 10 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis type="number" />
-          <YAxis dataKey="real" type="category" />
-          <Tooltip formatter={(value: number) => value.toLocaleString()} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+          <XAxis type="number" tick={{ fill: 'var(--chart-text)' }} />
+          <YAxis dataKey="real" type="category" tick={{ fill: 'var(--chart-text)' }} />
+          <Tooltip
+            formatter={(value: number) => value.toLocaleString()}
+            contentStyle={{ backgroundColor: 'var(--tooltip-bg)', borderColor: 'var(--chart-grid)', color: 'var(--tooltip-text)' }}
+          />
           <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-            {data.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+            {data.map((_, i) => <Cell key={i} fill={`var(--chart-color-${i})`} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>

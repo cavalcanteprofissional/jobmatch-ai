@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.9.3] — 2026-06-27
+
+### Adicionado
+- **Dark Mode completo** — `ThemeContext` com toggle 🌙/☀️ no navbar, persistência em localStorage, classes `dark:` em todos os componentes
+- **ThemeContext + ThemeProvider** — Contexto React para tema, respeita `prefers-color-scheme` do SO
+- **CSS variables para charts** — `--chart-bar`, `--chart-grid`, `--chart-text`, `--tooltip-bg`, `--tooltip-text` mudam com o tema
+- **RegressionScatter** — Gráfico scatter predito vs real consumindo `/eval/regression`
+- **ScoreDistribution** — Histograma de scores de classificação por classe consumindo `/eval/classification`
+- **Novos dados da API exibidos** — `score_pct`, `fit_label`, `estimated_annual_usd`, `best_params` (em `<details>` expansível), `best_candidate`, badge Fit/No Fit por vaga
+
+### Corrigido
+- **best_params vazava da box** — Substituído card fixo por `<details>` com chave-valor + `break-all`
+- **best_candidate sem truncate** — `truncate max-w-[140px]` no Metric
+- **Job title quebrava o flex no mobile** — `truncate` no `<span>` do summary
+- **Endpoint path esticava a tabela** — `max-w-[200px] truncate` + tooltip
+- **skills_desc sem break-words** — `break-words` no container
+- **Badges skills com contraste baixo no dark** — `*-900/60` + `*-200` + borda (antes `/40` + `-300`)
+- **Warning boxes ilegíveis no dark** — `*-900/50` + `*-200` + borda (antes `/30` + `-400`)
+- **Empty state quase invisível no dark** — `dark:text-gray-400` (era `-500`)
+- **Tooltip charts com texto escuro no dark** — `--tooltip-text: #d1d5db` separado de `--chart-text`
+- **Dev plan sem break-words** — `break-words` nos parágrafos curso/tempo
+- **fit_label MetricCard overflow** — `text-lg` adaptativo se > 10 chars + `break-words`
+
+### Alterado
+- `tailwind.config.js` — Adicionado `darkMode: 'class'` + tokens de cor
+- `index.css` — CSS variables para charts
+- `Monitor.tsx` — Grid de 6 → 8+ metrics, gráficos de avaliação integrados
+- `JobMatch.tsx` — Grid de 4 → 5 MetricCards com novos campos
+- `todo.md` — Fase 8 e 9 registradas e concluídas
+
 ## [0.9.2] — 2026-06-27
 
 ### Adicionado

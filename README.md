@@ -11,9 +11,9 @@ Sistema de Machine Learning para matching inteligente entre currículos e vagas 
 - **Estimativa Salarial**: Regressão (GradientBoosting / XGBoost / LightGBM / RF / ET / SGD / DT / KNN) para prever faixa salarial por cargo
 - **Embeddings Semânticos (SBERT)**: Opcional — Sentence-BERT `all-MiniLM-L6-v2` para classificação com MLP/GaussianNB
 - **API REST**: Endpoints FastAPI para predição, health check, info dos modelos e métricas
-- **Frontend React + Vite**: SPA moderna com TypeScript, Tailwind CSS e Recharts
+- **Frontend React + Vite**: SPA moderna com TypeScript, Tailwind CSS e Recharts, dark mode completo com toggle 🌙/☀️
 - **Página Match**: Upload de PDF/DOCX, formulário de análise, resultados com cards, skills e plano de desenvolvimento
-- **Página Monitor**: Dashboard com métricas do modelo ML (matriz de confusão, nested CV, scatter) e métricas da API (latência, requisições, erros)
+- **Página Monitor**: Dashboard com métricas do modelo ML (matriz de confusão, nested CV, scatter regressão, score distribution) e métricas da API (latência, requisições, erros)
 - **Docker**: Deploy multi-stage com Docker Compose (FastAPI + Nginx + React)
 - **CI/CD**: GitHub Actions (lint + testes + coverage) com deploy automático para GHCR
 
@@ -158,17 +158,17 @@ git push origin feat/frontend-react
 4. **Root Directory**: `frontend`
 5. **Build Command**: `npm ci && npm run build`
 6. **Publish Directory**: `dist`
-7. **Environment Variable**: `VITE_API_URL = https://jobmatch-api.onrender.com`
+7. **Environment Variable**: `VITE_API_URL = https://jobmatch-api-hpan.onrender.com`
 8. **Create Static Site** — aguardar ~2 min
 
 ### Resultado
 
 ```bash
-curl https://jobmatch-api.onrender.com/health
+curl https://jobmatch-api-hpan.onrender.com/health
 # {"status":"ok","models_loaded":true,"jobs_count":2978}
 ```
 
-Frontend em `https://jobmatch-frontend.onrender.com`, API em `https://jobmatch-api.onrender.com/docs`.
+Frontend em `https://jobmatch-frontend.onrender.com`, API em `https://jobmatch-api-hpan.onrender.com/docs`.
 
 ### Fallback automático
 

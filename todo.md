@@ -305,6 +305,104 @@
 | 20 | Criar `.env.local` e `.env.example` no frontend para testar local com API cloud | ✅ |
 | 21 | Adicionar `CORSMiddleware` na API (permitir frontend local + Render) | ✅ |
 
+### Checklist Aprimoramentos Frontend
+
+| # | Tarefa | Prioridade | Status |
+|---|--------|-----------|--------|
+| 1 | Dark mode foundation — configurar `darkMode: 'class'`, ThemeContext, toggle no navbar | Alta | ✅ |
+| 2 | Tokens de cor no tailwind.config.js — paleta centralizada light/dark | Alta | ✅ |
+| 3 | Refatorar JobMatch dark mode — classes `dark:` em todos os elementos | Alta | ✅ |
+| 4 | Refatorar Monitor dark mode — classes `dark:` em tabela, métricas, abas | Alta | ✅ |
+| 5 | Refatorar Charts dark mode — cores via variáveis de tema | Média | ✅ |
+| 6 | Exibir dados da API não usados — `score_pct`, `fit_label`, `estimated_annual_usd`, `best_params`, `best_candidate` | Média | ✅ |
+| 7 | ScatterChart regressão — gráfico predito vs real com `/eval/regression` | Média | ✅ |
+| 8 | ScoreDistribution classificação — histograma de scores com `/eval/classification` | Média | ✅ |
+| 9 | Animações e transições — `transition-colors`, loading skeleton, fade-in | Baixa | ✅ |
+| 10 | Responsividade — `min-h` nos gráficos, grid mobile adaptável | Baixa | ✅ |
+| 11 | Badge Fit/No Fit por vaga nos resultados | Baixa | ✅ |
+
+---
+
+## Fase 8 — Dark Mode + Aprimoramentos Frontend (CONCLUÍDA — branch `feat/frontend-react`)
+
+### Checklist Fase 8
+
+| # | Tarefa | Prioridade | Status |
+|---|--------|-----------|--------|
+| 1 | Dark mode foundation (ThemeContext, toggle, localStorage) | Alta | ✅ |
+| 2 | Tokens de cor no tailwind.config.js | Alta | ✅ |
+| 3 | Refatorar JobMatch dark mode | Alta | ✅ |
+| 4 | Refatorar Monitor dark mode | Alta | ✅ |
+| 5 | Charts com CSS variables | Média | ✅ |
+| 6 | Exibir score_pct, fit_label, estimated_annual_usd, best_params, best_candidate | Média | ✅ |
+| 7 | RegressionScatter (scatter predito vs real) | Média | ✅ |
+| 8 | ScoreDistribution (histograma de scores) | Média | ✅ |
+
+---
+
+## Fase 9 — Correções de Legibilidade e Overflow (EM ANDAMENTO — branch `feat/frontend-react`)
+
+### Diagnóstico
+Análise completa dos 15 arquivos de frontend revelou 11 problemas de layout e contraste.
+
+| Prioridade | Problemas |
+|-----------|-----------|
+| 🔴 Crítico | `best_params` vaza da box, `best_candidate` sem truncate, título job quebra flex, endpoint tabela sem break-all, skills_desc sem break-words |
+| 🟡 Médio | Badges skills contraste baixo dark, warning boxes ilegíveis, empty state invisível |
+| 🟢 Baixo | Tooltip chart text, dev plan break-words, fit_label card adaptável |
+
+### Checklist
+
+| # | Tarefa | Prioridade | Status |
+|---|--------|-----------|--------|
+| 1 | `best_params` — trocar Metric por `<details>` expansível com chave-valor | 🔴 | ⬜ |
+| 2 | `best_candidate` — `truncate` + `max-w` no Metric | 🔴 | ⬜ |
+| 3 | Job title `<summary>` — `truncate` + `overflow-hidden` no flex | 🔴 | ⬜ |
+| 4 | Endpoint tabela — `break-all` + `max-w-[200px]` | 🔴 | ⬜ |
+| 5 | `skills_desc` — `break-words` no container | 🔴 | ⬜ |
+| 6 | Badges skills dark — `*-900/60` + `*-200` + borda | 🟡 | ⬜ |
+| 7 | Warning boxes dark — `*-900/50` + `*-200` | 🟡 | ⬜ |
+| 8 | Empty state — `dark:text-gray-400` (era gray-500) | 🟡 | ⬜ |
+| 9 | Tooltip chart text — `--tooltip-text: #d1d5db` | 🟢 | ⬜ |
+| 10 | Dev plan — `break-words` nos parágrafos | 🟢 | ⬜ |
+| 11 | `fit_label` MetricCard — `text-lg` se > 10 chars | 🟢 | ⬜ |
+
+### Progresso
+
+| Data | Avanço |
+|------|--------|
+| 27/06 | Análise completa, registro do plano |
+
+### Motivação
+- Frontend sem dark mode — experiência ruim em ambiente noturno
+- API retorna dados ricos (`score_pct`, `best_params`, eval data) que não são exibidos
+- Gráficos sub-aproveitados: scatter de regressão e distribuição de scores não existem
+
+### Estratégia
+1. `darkMode: 'class'` no Tailwind — toggle no navbar, persistência em localStorage
+2. Tokens de cor centralizados no `tailwind.config.js` (extend colors)
+3. Classes `dark:` adicionadas em todos os componentes, sem refatorar estrutura
+4. Cores dos gráficos Recharts via variáveis CSS (mudam com o tema)
+5. Novos componentes: `RegressionScatter.tsx`, `ScoreDistribution.tsx`
+6. Dados não exibidos: `score_pct`, `fit_label`, `estimated_annual_usd`, `best_params`, `best_candidate`
+
+### Paleta Dark Mode
+
+| Token | Light | Dark |
+|-------|-------|------|
+| `bg-primary` | `gray-50` | `gray-950` |
+| `bg-surface` | `white` | `gray-900` |
+| `bg-surface-2` | `gray-100` | `gray-800` |
+| `text-primary` | `gray-900` | `gray-100` |
+| `text-secondary` | `gray-500` | `gray-400` |
+| `accent` | `indigo-600` | `indigo-400` |
+| `border` | `gray-200`/`gray-300` | `gray-700` |
+| `success` | `emerald-600` | `emerald-400` |
+| `danger` | `red-600` | `red-400` |
+| `chart-line` | `#667eea` | `#818cf8` |
+
+---
+
 ### Fluxo de acesso final
 
 ```

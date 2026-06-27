@@ -17,15 +17,18 @@ export default function MetricsBar({ accuracy, f1_score, precision, recall }: Pr
 
   return (
     <div>
-      <h3 className="font-semibold mb-2">Métricas de Classificação</h3>
+      <h3 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">Métricas de Classificação</h3>
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={data} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis domain={[0, 1]} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} />
-          <Tooltip formatter={(value: number) => `${(value * 100).toFixed(1)}%`} />
-          <ReferenceLine y={0.7} stroke="red" strokeDasharray="6 3" label="Meta 70%" />
-          <Bar dataKey="value" fill="#667eea" radius={[4, 4, 0, 0]} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+          <XAxis dataKey="name" tick={{ fill: 'var(--chart-text)' }} />
+          <YAxis domain={[0, 1]} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} tick={{ fill: 'var(--chart-text)' }} />
+          <Tooltip
+            formatter={(value: number) => `${(value * 100).toFixed(1)}%`}
+            contentStyle={{ backgroundColor: 'var(--tooltip-bg)', borderColor: 'var(--chart-grid)', color: 'var(--tooltip-text)' }}
+          />
+          <ReferenceLine y={0.7} stroke="#ef4444" strokeDasharray="6 3" label={{ value: 'Meta 70%', fill: 'var(--chart-text)' }} />
+          <Bar dataKey="value" fill="var(--chart-bar)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
