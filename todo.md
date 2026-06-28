@@ -434,5 +434,6 @@ Monitor mostra "API não disponível" porque:
 | 3 | `api.ts`: adicionar retry com backoff exponencial (3 tentativas, 2-4-8s) | ✅ |
 | 4 | `Monitor.tsx`: adicionar loading state, spinner durante carregamento | ✅ |
 | 5 | `Monitor.tsx`: botão "Tentar novamente" após todas as tentativas esgotarem | ✅ |
-| 6 | Build + teste local | ⬜ |
-| 7 | Commit + push | ⬜ |
+| 6 | `vite.config.ts`: plugin inline que escreve `dist/_redirects` no `closeBundle` (garante SPA routing independente de cache) | ✅ |
+| 7 | (Manual) Dashboard Render: Clear build cache + Deploy | ⬜ |
+| 8 | Build + commit + push | ⬜ |
