@@ -32,6 +32,7 @@ notebooks/.ipynb_checkpoints/
 node_modules/
 frontend/dist/
 frontend/node_modules/
+frontend/tsconfig.tsbuildinfo
 
 # ─── IDE / Editor ──────────────────────────────────────────
 .vscode/

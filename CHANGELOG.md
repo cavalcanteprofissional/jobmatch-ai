@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.10.0] — 2026-06-27
+
+### Adicionado
+- **Code-splitting** — Páginas JobMatch e Monitor carregam via `React.lazy()` + `Suspense` com spinner.
+- **`manualChunks` no Vite** — Vendor (React) e Charts (Recharts) em chunks independentes (gzip: ~190 KB total).
+- **`dist/_redirects` via plugin Vite** — Plugin inline no `closeBundle` que escreve `/* /index.html 200` no build, garantindo SPA routing independente de cache ou ambiente.
+- **Loading state no Monitor** — Spinner durante carregamento, estados `loadingMl`/`loadingApi` separados.
+- **Botão "Tentar novamente"** — Em cada seção (ML e API) após falha, re-dispara os fetches.
+- **CORS aberto (`["*"]`)** — Render Static Site tem hash dinâmico no subdomínio; lista fixa quebrava. Agora aceita qualquer origem (API pública).
+
+### Corrigido
+- **SPA routing 404 ao clicar Monitor** — `<a href="/monitor">` trocado por `<Link to="/monitor">` do React Router. Navbar agora navega sem recarregar página.
+- **Refresh/F5 em `/monitor` dava 404** — `_redirects` gerado pelo Vite plugin + fallback manual no Dashboard.
+- **Monitor mostrava "API não disponível" imediatamente** — `fetch()` sem timeout, sem retry, fallback `localhost:8000` inválido em produção.
+- **`fetch()` sem timeout** — Adicionado `AbortController` com 15s de timeout.
+- **Sem retry para cold start** — 3 tentativas com backoff exponencial (2s → 4s → 8s) para acordar container free tier.
+- **Fallback `localhost:8000` em produção** — Removido quando `VITE_API_URL` existe (só faz sentido em dev).
+- **CORS bloqueado por hash no subdomínio** — `allow_origins` fixo não incluía `jobmatch-frontend-XXXX.onrender.com`. Substituído por `["*"]`.
+
+### Alterado
+- `frontend/src/App.tsx` — `import { Link }` do react-router, trocados 3 `<a href>` por `<Link to>`.
+- `frontend/vite.config.ts` — Plugin inline `redirects` no `closeBundle` + `manualChunks` vendor/charts.
+- `frontend/src/services/api.ts` — `fetchWithTimeout` com AbortController, retry 3x backoff 2-4-8s, fallback localhost removido em produção.
+- `frontend/src/pages/Monitor.tsx` — Estados `loadingMl`/`loadingApi`, `LoadingSpinner` component, botão "Tentar novamente".
+- `src/api/server.py` — `allow_origins` trocado de lista fixa para `["*"]`.
+- `.gitignore` — Adicionado `frontend/tsconfig.tsbuildinfo`.
+- `todo.md` — Fase 10 registrada e concluída, B8, B9, B10 documentados.
+- Removida branch `feat/frontend-react` — merge fast-forward para `main`.
+
+### Observado
+- **npm audit: 2 vulnerabilities (1 moderate, 1 high)** — Apenas em ferramentas de build (vite 5.x, esbuild). Static Site no Render não expõe dev server. Correção exigiria bump major (vite 8.x) que quebra compatibilidade com plugins. Zero impacto em produção.
+
 ## [0.9.3] — 2026-06-27
 
 ### Adicionado
