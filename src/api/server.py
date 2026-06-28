@@ -68,16 +68,12 @@ app = FastAPI(
 )
 
 # ====================================================================
-# CORS — permitir frontend local (dev) e Render (produção)
+# CORS — aberto para qualquer origem (API pública, Render Static Site tem hash dinâmico)
 # ====================================================================
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://jobmatch-frontend.onrender.com",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

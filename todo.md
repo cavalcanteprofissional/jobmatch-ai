@@ -280,6 +280,7 @@
 | B7 | CORS — frontend local não consegue bater na API do Render | `server.py` | Adicionado `CORSMiddleware` com origens `localhost:5173`, `localhost:3000`, `https://jobmatch-frontend.onrender.com` | 27/06 |
 | B8 | SPA routing — aba Monitor crasha "Not Found" ao clicar (navegação nativa `<a>` em vez de `<Link>`) | `App.tsx` | Trocar `<a href>` por `<Link to>` + criar `_redirects` para SPA fallback no Render | 27/06 |
 | B9 | Monitor mostra "API não disponível" — cold start do free tier + fallback localhost inválido + sem timeout/retry | `api.ts`, `Monitor.tsx` | Remover fallback localhost em produção. Adicionar AbortController timeout (15s) + retry (3x, backoff 2-4-8s). Loading state com spinner no Monitor | 27/06 |
+| B10 | CORS bloqueado — Render Static Site tem hash no subdomínio (`u6vt`), mas API só permite origem sem hash | `server.py` | Trocar `allow_origins` por `["*"]` (API pública, CORS aberto não afeta segurança) | 27/06 |
 
 ### Checklist
 
@@ -424,6 +425,7 @@ Monitor mostra "API não disponível" porque:
 3. `fetch()` sem timeout — espera até o timeout do navegador (60-300s)
 4. Sem retry — se a primeira tentativa falha (container restartando), não tenta de novo
 5. Monitor não tem loading state — mostra "erro" imediatamente sem distinção de "carregando"
+6. CORS mismatch — Render Static Site recebe hash aleatório no subdomínio (`jobmatch-frontend-XXXX.onrender.com`), mas `server.py` só permite a origem sem hash. Navegador bloqueia a requisição.
 
 ### Checklist
 
@@ -437,3 +439,4 @@ Monitor mostra "API não disponível" porque:
 | 6 | `vite.config.ts`: plugin inline que escreve `dist/_redirects` no `closeBundle` (garante SPA routing independente de cache) | ✅ |
 | 7 | (Manual) Dashboard Render: Clear build cache + Deploy | ⬜ |
 | 8 | Build + commit + push | ⬜ |
+| 9 | `server.py`: trocar `allow_origins` por `["*"]` (CORS aberto — API pública) | ✅ |
